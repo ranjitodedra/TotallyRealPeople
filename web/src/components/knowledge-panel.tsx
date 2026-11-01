@@ -4,6 +4,7 @@ import { Brain, BriefcaseBusiness, Link2, Pencil, Plus, Save, ShieldQuestion, Ta
 import { useState } from "react";
 import { PanelTitle } from "./brand";
 import type { CandidateRole, PublicProfile } from "@/lib/types";
+import { phoneInputPattern } from "@/lib/phone";
 
 const lines = (s: string) =>
   s
@@ -34,6 +35,7 @@ export function KnowledgePanel({
   async function save() {
     if (!editKey) return;
     if (!draft.candidateName.trim()) return setError("The candidate needs a name.");
+    if (!phoneInputPattern.test(draft.managerPhone.trim())) return setError("Enter 10 digits, with or without hyphens.");
     setError(null);
     setSaving(true);
     try {
@@ -59,6 +61,7 @@ export function KnowledgePanel({
           targetRole: { ...reference.targetRole, title: draft.targetTitle, priorities: lines(draft.priorities) },
           relevance: lines(draft.relevance),
           unknowns: lines(draft.unknowns),
+          manager: { name: draft.managerName.trim(), title: draft.managerTitle.trim(), company: reference.manager.company, phone: draft.managerPhone.trim() },
         }),
       });
       const body = await res.json();
@@ -88,6 +91,17 @@ export function KnowledgePanel({
             value={draft.candidateName}
             onChange={(e) => setDraft({ ...draft, candidateName: e.target.value })}
           />
+        </Field>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Field label="Reference name">
+            <input className="field" value={draft.managerName} onChange={(e) => setDraft({ ...draft, managerName: e.target.value })} />
+          </Field>
+          <Field label="Reference job title">
+            <input className="field" value={draft.managerTitle} onChange={(e) => setDraft({ ...draft, managerTitle: e.target.value })} />
+          </Field>
+        </div>
+        <Field label="Reference phone number">
+          <input className="field" type="tel" value={draft.managerPhone} onChange={(e) => setDraft({ ...draft, managerPhone: e.target.value })} placeholder="Phone number for the email signature" />
         </Field>
         {draft.roles.map((r, i) => (
           <div key={i} className="rounded-2xl border-2 border-[var(--line)] p-3 flex flex-col gap-2 bg-white">
@@ -334,6 +348,9 @@ function toDraft(r: PublicProfile) {
     priorities: r.targetRole.priorities.join("\n"),
     relevance: r.relevance.join("\n"),
     unknowns: r.unknowns.join("\n"),
+    managerName: r.manager.name,
+    managerTitle: r.manager.title,
+    managerPhone: r.manager.phone ?? "",
   };
 }
 

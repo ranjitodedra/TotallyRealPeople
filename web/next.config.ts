@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   cacheComponents: false,
   serverExternalPackages: ["unpdf"],
   turbopack: {
+    // This repo has a separate package-lock at the root for the email service.
+    // Keep Next's loader resolution rooted in the web app that owns this config.
+    root: process.cwd(),
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

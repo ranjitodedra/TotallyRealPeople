@@ -77,7 +77,7 @@ export interface ReferenceProfile {
   /** Things the reference can't speak to. */
   unknowns: string[];
   /** The fictional manager. `company` is the résumé employer the persona is framed around. */
-  manager: { name: string; title: string; company: string };
+  manager: { name: string; title: string; company: string; phone?: string };
   voice: string;
   /** Gemini or Grok for text and voice. Missing kinds use the server default (lib/models.ts). */
   models?: ModelChoice;

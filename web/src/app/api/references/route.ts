@@ -6,6 +6,7 @@ import { createInbox } from "@/lib/agentboxd";
 import { generateQa } from "@/lib/qa";
 import { matchEmployer } from "@/lib/employers";
 import { toPublic, type BuildEvent, type ReferenceProfile } from "@/lib/types";
+import { normalizePhoneNumber, phoneInputPattern } from "@/lib/phone";
 
 const Body = z.object({
   resumeText: z.string().min(40, "The résumé looks too short.").max(40000),
@@ -21,6 +22,7 @@ const Body = z.object({
       habits: z.array(z.string().max(160)).max(6).optional(),
     })
     .optional(),
+  referencePhone: z.string().regex(phoneInputPattern, "Enter 10 digits, with or without hyphens."),
 });
 
 // Bad input gets a plain JSON 400. Otherwise the response streams one JSON line per step,
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
 }
 
 async function build(
-  { resumeText, jobDescriptionText, manager, agent }: z.infer<typeof Body>,
+  { resumeText, jobDescriptionText, manager, agent, referencePhone }: z.infer<typeof Body>,
   send: (e: BuildEvent) => void,
 ) {
   send({ type: "step", step: "extract" });
@@ -73,6 +75,7 @@ async function build(
       name: manager?.name?.trim() || MANAGER.name,
       title: manager?.title?.trim() || MANAGER.title,
       company: matchEmployer(manager?.company ?? "", ex.facts.roles.map((r) => r.company)) ?? ex.managerCompany,
+      phone: normalizePhoneNumber(referencePhone)!,
     },
     agent,
     voice: MANAGER.voice,

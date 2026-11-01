@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RefBot · LARPhacks</title>
+  <style>
+    :root{color-scheme:dark;font:16px/1.5 system-ui,sans-serif;background:#101216;color:#eceef2}*{box-sizing:border-box}body{max-width:820px;margin:8vh auto;padding:0 20px}h1{font-size:1.8rem}p{color:#aeb4c0}textarea{width:100%;min-height:110px;background:#191d24;color:inherit;border:1px solid #353b46;border-radius:10px;padding:14px;font:inherit}button{margin:12px 8px 0 0;padding:10px 15px;border:0;border-radius:8px;background:#8fc8aa;color:#101216;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:wait}#thread{margin-top:28px;border-top:1px solid #303640;padding-top:15px}.event{margin:12px 0;padding:12px 14px;background:#191d24;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere}.label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#8fc8aa}.meta{font-size:.85rem;color:#9ba3b0}
+  </style>
+</head>
+<body>
+  <h1>RefBot</h1><p>A fictional reference persona for the LARPhacks demo.</p>
+  <label for="prompt">Describe the fictional referee</label>
+  <textarea id="prompt" placeholder="A former teammate who remembers my knack for keeping projects organized…"></textarea>
+  <div><button id="create">Create persona</button><button id="sample" disabled>Send sample request</button></div>
+  <main id="thread" aria-live="polite"><p class="meta">Create a persona to start the email thread.</p></main>
+  <script>
+    const promptBox=document.querySelector('#prompt'), createButton=document.querySelector('#create'), sampleButton=document.querySelector('#sample'), thread=document.querySelector('#thread');
+    let session=null, events=null;
+    function add(label,body){const card=document.createElement('article');card.className='event';const title=document.createElement('div');title.className='label';title.textContent=label;const content=document.createElement('div');content.textContent=body;card.append(title,content);thread.prepend(card)}
+    createButton.onclick=async()=>{createButton.disabled=true;thread.replaceChildren();try{const response=await fetch('/api/sessions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt:promptBox.value})});session=await response.json();if(!response.ok)throw new Error(session.error||'Could not create session');add('Persona',`${session.persona.displayName} · ${session.persona.roleTitle} at ${session.persona.fictionalOrg}\nInbox: ${session.personaInbox.address}`);add('Requester inbox',session.requesterInbox.address);sampleButton.disabled=false;events?.close();events=new EventSource(`/api/sessions/${session.id}/events`);for(const name of ['request_sent','request_received','reply_drafted','lint_result','reply_sent','error'])events.addEventListener(name,e=>{const data=JSON.parse(e.data);add(name.replaceAll('_',' '),data.text||data.message||data.reason||JSON.stringify(data))})}catch(error){add('Error',error.message)}finally{createButton.disabled=false}};
+    sampleButton.onclick=async()=>{if(!session)return;sampleButton.disabled=true;try{const response=await fetch(`/api/sessions/${session.id}/sample-request`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not send request')}catch(error){add('Error',error.message);sampleButton.disabled=false}};
+  </script>
+</body>
+</html>

@@ -19,10 +19,12 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { JobPicker } from "@/components/job-picker";
+import { RefBotPanel } from "@/components/refbot-panel";
 import { guessEmployers } from "@/lib/employers";
 import { MANAGER } from "@/lib/manager";
 import { SAMPLE_RESUME } from "@/lib/samples";
 import type { BuildEvent, BuildStep } from "@/lib/types";
+import { phoneInputPattern } from "@/lib/phone";
 
 export default function CreatePage() {
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function CreatePage() {
   const [custom, setCustom] = useState(customFrom);
   const [customOpen, setCustomOpen] = useState(false);
   const employers = useMemo(() => guessEmployers(resume), [resume]);
+  const [referencePhone, setReferencePhone] = useState("");
   const [busy, setBusy] = useState<null | "pdf" | "build">(null);
   const [step, setStep] = useState<BuildStep | "done" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,13 +61,14 @@ export default function CreatePage() {
     setError(null);
     if (resume.trim().length < 40) return setError("Add a résumé first: upload a PDF or paste the text.");
     if (jd.trim().length < 20) return setError("Paste the job description first.");
+    if (!phoneInputPattern.test(referencePhone.trim())) return setError("Enter 10 digits, with or without hyphens.");
     setBusy("build");
     try {
       setStep("extract");
       const res = await fetch("/api/references", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, ...customBody(custom) }),
+        body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, referencePhone, ...customBody(custom) }),
       });
       if (!res.ok || !res.body) throw new Error((await res.json().catch(() => ({}))).error);
       const done = await readBuild(res.body, setStep);
@@ -152,6 +156,11 @@ export default function CreatePage() {
           employers={employers}
           onReset={() => setCustom(customFrom())}
         />
+        <div className="flex flex-col items-start gap-2 text-sm font-medium">
+          <label htmlFor="reference-phone-number">Reference phone number</label>
+          <input id="reference-phone-number" className="field" type="tel" autoComplete="tel" required value={referencePhone} onChange={(e) => setReferencePhone(e.target.value)} placeholder="123-456-7890 or 1234567890" />
+          <button className="btn text-xs! py-1!" type="button" onClick={() => setReferencePhone("123-456-7890")}>Use sample number: 123-456-7890</button>
+        </div>
       </Section>
 
       <div className="flex flex-col gap-3 pb-6">
@@ -166,6 +175,7 @@ export default function CreatePage() {
         )}
         {error && <p className="text-sm text-center text-[var(--danger)]">{error}</p>}
       </div>
+      <RefBotPanel resumeText={resume} jobDescriptionText={jd} />
     </div>
   );
 }

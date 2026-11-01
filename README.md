@@ -111,3 +111,7 @@ Its prompts are in **`web/prompts/larp.md`**, with two sections: `## Generator` 
 
 - Render: hosting for the app (and the phone bridge: same web service, see `web/RENDER.md`)
 - Agentboxd: email inboxes for the AI references
+
+## Agentboxd email service
+
+The existing Next.js app is in `web/`. The RefBot email panel connects to the Fastify service in the repository root. Copy `.env.example` to `.env`, fill in the service keys, then run `npm install` and `npm run dev` from the repository root. In a second terminal, run `npm install` and `npm run dev` from `web/` and open http://localhost:3000. `Start RefBot.command` starts both locally on macOS.

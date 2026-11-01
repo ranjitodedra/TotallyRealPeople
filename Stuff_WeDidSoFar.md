@@ -83,3 +83,10 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [ ] Extra voices, then ElevenLabs
 - [ ] Rehearse the demo and record a fallback video
 - [ ] "My references" (`/references`, header link) is a showcase placeholder: it lists the references this browser made (from `trp-edit-*` keys) and sample cards; Duplicate, Archive, Set as phone line and Google/GitHub sign-in are disabled until we add accounts (OAuth)
+
+## Agentboxd email service
+
+- [x] Added the root Fastify service for Agentboxd inboxes, email sessions, polling, and live status updates.
+- [x] Connected the existing Next.js interface to the service through the RefBot panel.
+- [x] Added the manager phone field for a formatted reply signature.
+- [~] Run the email loop end to end with configured Agentboxd and model keys.
