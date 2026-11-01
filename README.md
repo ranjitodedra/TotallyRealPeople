@@ -43,6 +43,10 @@ Copy `web/.env.example` to `web/.env.local` and fill in what you have.
 
 Optional overrides: `GEMINI_TEXT_MODEL`, `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_API_VERSION`.
 
+## Changing the manager
+
+There is one demo manager. Everything about them (name, tone, habits, example answers, sample answers to 30 likely questions) is in `web/src/lib/manager.ts`. Replace each `[PLACEHOLDER_GTEXT]` with a sample answer. The safety rules in `web/src/lib/instruction.ts` always win over that file.
+
 ## How it works
 
 1. The resume and job description go to Gemini, which returns structured facts: roles, skills, target role priorities, how the experience fits, and what the reference cannot verify.

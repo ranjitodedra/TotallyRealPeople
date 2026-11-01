@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { extractProfile } from "@/lib/extract";
-import { getPersona } from "@/lib/personas";
+import { MANAGER } from "@/lib/manager";
 import { hashKey, newId, saveReference } from "@/lib/store";
 import { createInbox } from "@/lib/agentboxd";
 import { generateQa } from "@/lib/qa";
@@ -10,7 +10,6 @@ import { toPublic, type ReferenceProfile } from "@/lib/types";
 const Body = z.object({
   resumeText: z.string().min(40, "The résumé looks too short.").max(40000),
   jobDescriptionText: z.string().min(20, "The job description looks too short.").max(30000),
-  personaId: z.string().default("technical-manager"),
   /** Optional edits from setup step 3. Company must be a résumé employer. */
   manager: z
     .object({ name: z.string().max(60).optional(), title: z.string().max(80).optional(), company: z.string().max(120).optional() })
@@ -27,8 +26,7 @@ const Body = z.object({
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
-  const { resumeText, jobDescriptionText, personaId, manager, agent } = parsed.data;
-  const persona = getPersona(personaId);
+  const { resumeText, jobDescriptionText, manager, agent } = parsed.data;
 
   let ex;
   try {
@@ -49,14 +47,13 @@ export async function POST(req: Request) {
     targetRole: ex.targetRole,
     relevance: ex.relevance,
     unknowns: ex.unknowns,
-    personaId: persona.id,
     manager: {
-      name: manager?.name?.trim() || persona.name,
-      title: manager?.title?.trim() || persona.title,
+      name: manager?.name?.trim() || MANAGER.name,
+      title: manager?.title?.trim() || MANAGER.title,
       company: matchEmployer(manager?.company ?? "", ex.facts.roles.map((r) => r.company)) ?? ex.managerCompany,
     },
     agent,
-    voice: persona.voice,
+    voice: MANAGER.voice,
     messages: [],
     fakeExtraction: ex.fake,
     editKeyHash: hashKey(editKey),

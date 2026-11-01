@@ -1,5 +1,4 @@
-import { getPersona, type PersonaTemplate } from "./personas";
-import { isFilled, questionBank } from "./question-bank";
+import { isFilled, MANAGER, type Manager } from "./manager";
 import type { AgentCustom, Channel, ReferenceProfile } from "./types";
 
 /**
@@ -7,8 +6,8 @@ import type { AgentCustom, Channel, ReferenceProfile } from "./types";
  * so every channel speaks from the same facts.
  */
 export function buildReferenceInstruction(p: ReferenceProfile, channel: Channel): string {
-  // Template half (persona file) + user half (their tone/focus edits).
-  const persona = withAgent(getPersona(p.personaId), p.agent);
+  // Template half (manager.ts) + user half (their tone/focus edits).
+  const persona = withAgent(MANAGER, p.agent);
   const f = p.facts;
   const first = f.candidateName.split(" ")[0] || f.candidateName;
   const d = asData;
@@ -83,7 +82,7 @@ ${channelRules(channel, p)}`,
   return sections.filter(Boolean).join("\n\n");
 }
 
-function withAgent(persona: PersonaTemplate, agent?: AgentCustom): PersonaTemplate {
+function withAgent(persona: Manager, agent?: AgentCustom): Manager {
   if (!agent) return persona;
   const clean = (xs?: string[]) => xs?.map(asData).filter((x) => x.trim());
   return {
@@ -94,9 +93,9 @@ function withAgent(persona: PersonaTemplate, agent?: AgentCustom): PersonaTempla
   };
 }
 
-/** The persona's sample answers for likely questions. Guidance for tone and shape, never a fact source. */
-function questionGuide(persona: PersonaTemplate) {
-  const rows = questionBank(persona)
+/** The manager's sample answers for likely questions. Guidance for tone and shape, never a fact source. */
+function questionGuide(persona: Manager) {
+  const rows = persona.questions
     .map(
       (q) =>
         `Q: ${q.question}\nA: ${isFilled(q.answer) ? q.answer : "(no sample answer: if the candidate facts above don't answer this, say you don't know)"}`,
@@ -123,7 +122,7 @@ ${rows}
 </candidate_answers>`;
 }
 
-function personaStyle(persona: PersonaTemplate) {
+function personaStyle(persona: Manager) {
   return [
     `Tone: ${persona.tone}`,
     `You notice and talk about: ${persona.focusAreas.join(", ")}.`,

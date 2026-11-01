@@ -20,15 +20,14 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { JobPicker } from "@/components/job-picker";
 import { guessEmployers } from "@/lib/employers";
-import { PERSONAS, getPersona, type PersonaTemplate } from "@/lib/personas";
+import { MANAGER } from "@/lib/manager";
 import { SAMPLE_RESUME } from "@/lib/samples";
 
 export default function CreatePage() {
   const router = useRouter();
   const [resume, setResume] = useState("");
   const [jd, setJd] = useState("");
-  const [personaId, setPersonaId] = useState(PERSONAS[0].id);
-  const [custom, setCustom] = useState(() => customFrom(PERSONAS[0]));
+  const [custom, setCustom] = useState(customFrom);
   const [customOpen, setCustomOpen] = useState(false);
   const employers = useMemo(() => guessEmployers(resume), [resume]);
   const [busy, setBusy] = useState<null | "pdf" | "build">(null);
@@ -62,7 +61,7 @@ export default function CreatePage() {
       const res = await fetch("/api/references", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, personaId, ...customBody(getPersona(personaId), custom) }),
+        body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, ...customBody(custom) }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
@@ -124,39 +123,29 @@ export default function CreatePage() {
       </Section>
 
       <Section n={3} icon={UserRound} tint="#eaf8dd" color="#3a8a00" title="Manager template">
-        {PERSONAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className="option"
-            aria-pressed={personaId === p.id}
-            onClick={() => {
-              setPersonaId(p.id);
-              setCustom(customFrom(p));
-            }}
-          >
-            <span className="w-11 h-11 rounded-full flex items-center justify-center font-bold bg-[var(--p-green)] text-[#2f6b00] flex-none">
-              {p.name
-                .split(" ")
-                .map((w) => w[0])
-                .join("")}
+        {/* One manager for the demo (edit lib/manager.ts). */}
+        <button type="button" className="option" aria-pressed>
+          <span className="w-11 h-11 rounded-full flex items-center justify-center font-bold bg-[var(--p-green)] text-[#2f6b00] flex-none">
+            {MANAGER.name
+              .split(" ")
+              .map((w) => w[0])
+              .join("")}
+          </span>
+          <span>
+            <span className="block font-semibold text-[16px]">{MANAGER.label}</span>
+            <span className="block text-[14px] text-[var(--ink-2)]">
+              {MANAGER.name} · {MANAGER.blurb}
             </span>
-            <span>
-              <span className="block font-semibold text-[16px]">{p.label}</span>
-              <span className="block text-[14px] text-[var(--ink-2)]">
-                {p.name} · {p.blurb}
-              </span>
-            </span>
-            {personaId === p.id && <Check className="ml-auto text-[var(--blue)]" size={22} aria-hidden />}
-          </button>
-        ))}
+          </span>
+          <Check className="ml-auto text-[var(--blue)]" size={22} aria-hidden />
+        </button>
         <CustomizeAgent
           open={customOpen}
           onToggle={() => setCustomOpen(!customOpen)}
           value={custom}
           onChange={setCustom}
           employers={employers}
-          onReset={() => setCustom(customFrom(getPersona(personaId)))}
+          onReset={() => setCustom(customFrom())}
         />
       </Section>
 
@@ -174,13 +163,14 @@ export default function CreatePage() {
 
 type Custom = { name: string; title: string; company: string; tone: string; focusAreas: string };
 
-function customFrom(p: PersonaTemplate): Custom {
-  return { name: p.name, title: p.title, company: "", tone: p.tone, focusAreas: p.focusAreas.join(", ") };
+function customFrom(): Custom {
+  const m = MANAGER;
+  return { name: m.name, title: m.title, company: "", tone: m.tone, focusAreas: m.focusAreas.join(", ") };
 }
 
-/** Only send what the user actually changed, so template updates still flow through. */
-function customBody(p: PersonaTemplate, c: Custom) {
-  const base = customFrom(p);
+/** Only send what the user actually changed, so edits to manager.ts still flow through. */
+function customBody(c: Custom) {
+  const base = customFrom();
   const focus = c.focusAreas
     .split(",")
     .map((s) => s.trim())

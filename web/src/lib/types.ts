@@ -65,7 +65,6 @@ export interface ReferenceProfile {
   relevance: string[];
   /** Things the reference can't speak to. */
   unknowns: string[];
-  personaId: string;
   /** The fictional manager. `company` is the résumé employer the persona is framed around. */
   manager: { name: string; title: string; company: string };
   voice: string;
