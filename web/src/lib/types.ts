@@ -41,6 +41,8 @@ export interface QaItem {
   question: string;
   /** Empty means "not answered yet": the bot says it doesn't have that information. */
   answer: string;
+  /** Fixed safety answers. Shown to the owner but never editable. */
+  locked?: boolean;
 }
 
 export interface ReferenceProfile {

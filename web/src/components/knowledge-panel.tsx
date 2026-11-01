@@ -3,7 +3,6 @@
 import { Brain, BriefcaseBusiness, Link2, Pencil, Plus, Save, ShieldQuestion, Target, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
 import { PanelTitle } from "./brand";
-import { TuneAnswers } from "./tune-answers";
 import type { CandidateRole, PublicProfile } from "@/lib/types";
 
 const lines = (s: string) =>
@@ -22,6 +21,7 @@ export function KnowledgePanel({
   onSaved: (r: PublicProfile) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [tab, setTab] = useState<Tab>("experience");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState(() => toDraft(reference));
@@ -187,93 +187,132 @@ export function KnowledgePanel({
     );
   }
 
+  const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "experience", label: "Experience", count: f.roles.length },
+    { id: "role", label: "Target role" },
+    { id: "gaps", label: "Can't verify", count: reference.unknowns.length },
+  ];
+
   return (
     <div className="card flex flex-col gap-4 text-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <PanelTitle icon={Brain} tint="#fdeaf1" color="#c23a6b">
           What this reference knows
         </PanelTitle>
         {editKey && (
-          <div className="flex gap-2">
-            <TuneAnswers reference={reference} editKey={editKey} onSaved={onSaved} />
-            <button className="btn text-xs! py-1!" onClick={startEdit}>
-              <Pencil size={13} aria-hidden /> Edit
-            </button>
-          </div>
+          <button className="btn text-xs! py-1! flex-none" onClick={startEdit}>
+            <Pencil size={13} aria-hidden /> Edit
+          </button>
         )}
       </div>
 
-      <section>
-        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
-          <BriefcaseBusiness size={15} aria-hidden /> Roles
-        </h3>
-        {f.roles.length === 0 && <p className="muted">No roles found. Edit to add them.</p>}
-        <ul className="flex flex-col gap-2">
-          {f.roles.map((r, i) => (
-            <li key={i}>
-              <div className="font-medium">
-                {r.title} · {r.company}
-              </div>
-              <div className="muted text-xs">{[r.startDate, r.endDate].filter(Boolean).join(" – ") || "Dates not given"}</div>
-              {r.achievements.length > 0 && (
-                <ul className="list-disc pl-5 mt-1 text-[var(--ink-2)]">
-                  {r.achievements.map((a, j) => (
-                    <li key={j}>{a}</li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div role="tablist" className="flex gap-1 p-1 rounded-2xl bg-[var(--card-2)]">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 rounded-xl px-2 py-1.5 text-sm font-medium transition-colors ${
+              tab === t.id ? "bg-white shadow-sm text-[var(--ink)]" : "text-[var(--ink-2)] hover:text-[var(--ink)]"
+            }`}
+          >
+            {t.label}
+            {t.count ? <span className="ml-1 text-xs text-[var(--ink-3)]">{t.count}</span> : null}
+          </button>
+        ))}
+      </div>
 
-      {f.skills.length > 0 && (
-        <section>
-          <h3 className="font-semibold mb-1 flex items-center gap-1.5">
-            <Wrench size={15} aria-hidden /> Skills
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            {f.skills.map((s) => (
-              <span key={s} className="chip">
-                {s}
-              </span>
+      {tab === "experience" && (
+        <div role="tabpanel" className="flex flex-col gap-4">
+          {f.roles.length === 0 && <p className="muted">No roles found. Edit to add them.</p>}
+          <ul className="flex flex-col gap-3">
+            {f.roles.map((r, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="icon-tile w-8! h-8! flex-none bg-[var(--card-2)]! text-[var(--ink-2)]!">
+                  <BriefcaseBusiness size={15} aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium leading-snug">{r.title}</div>
+                  <div className="muted text-xs">
+                    {r.company} · {[r.startDate, r.endDate].filter(Boolean).join(" – ") || "Dates not given"}
+                  </div>
+                  <MoreList items={r.achievements} show={2} />
+                </div>
+              </li>
             ))}
-          </div>
-        </section>
+          </ul>
+          {f.skills.length > 0 && (
+            <section>
+              <h3 className="font-semibold mb-1.5 flex items-center gap-1.5">
+                <Wrench size={15} aria-hidden /> Skills
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {f.skills.map((s) => (
+                  <span key={s} className="chip">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       )}
 
-      <section>
-        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
-          <Target size={15} aria-hidden /> Target role · {reference.targetRole.title}
-        </h3>
-        <ul className="list-disc pl-5 text-[var(--ink-2)]">
-          {reference.targetRole.priorities.map((p, i) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </section>
+      {tab === "role" && (
+        <div role="tabpanel" className="flex flex-col gap-4">
+          <section>
+            <h3 className="font-semibold flex items-center gap-1.5">
+              <Target size={15} aria-hidden /> {reference.targetRole.title}
+            </h3>
+            <p className="muted text-xs mt-0.5 mb-1">What the job cares about</p>
+            <MoreList items={reference.targetRole.priorities} show={3} />
+          </section>
+          <section className="rounded-2xl px-4 py-3 bg-[var(--green-bg)]">
+            <h3 className="font-semibold mb-1 flex items-center gap-1.5 text-[var(--green-ink)]">
+              <Link2 size={15} aria-hidden /> Why they fit
+            </h3>
+            <MoreList items={reference.relevance} show={4} />
+          </section>
+        </div>
+      )}
 
-      <section>
-        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
-          <Link2 size={15} aria-hidden /> Why they fit
-        </h3>
-        <ul className="list-disc pl-5 text-[var(--ink-2)]">
-          {reference.relevance.map((p, i) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </section>
+      {tab === "gaps" && (
+        <div role="tabpanel" className="rounded-2xl px-4 py-3 bg-[var(--amber-bg)] text-[var(--amber-ink)]">
+          <h3 className="font-semibold mb-1 flex items-center gap-1.5">
+            <ShieldQuestion size={15} aria-hidden /> The reference will say it doesn&apos;t know
+          </h3>
+          <ul className="list-disc pl-5">
+            {reference.unknowns.map((p, i) => (
+              <li key={i}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <section className="rounded-2xl px-4 py-3 bg-[var(--amber-bg)] text-[var(--amber-ink)]">
-        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
-          <ShieldQuestion size={15} aria-hidden /> Can&apos;t verify
-        </h3>
-        <ul className="list-disc pl-5">
-          {reference.unknowns.map((p, i) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </section>
+type Tab = "experience" | "role" | "gaps";
+
+/** A bullet list that shows the first few items and folds the rest behind "Show N more". */
+function MoreList({ items, show }: { items: string[]; show: number }) {
+  const [all, setAll] = useState(false);
+  if (items.length === 0) return null;
+  const visible = all ? items : items.slice(0, show);
+  const hidden = items.length - show;
+  return (
+    <div className="mt-1">
+      <ul className="list-disc pl-5 text-[var(--ink-2)] flex flex-col gap-0.5">
+        {visible.map((a, j) => (
+          <li key={j}>{a}</li>
+        ))}
+      </ul>
+      {hidden > 0 && (
+        <button className="text-xs font-medium text-[var(--blue-dark)] mt-1 hover:underline" onClick={() => setAll(!all)}>
+          {all ? "Show less" : `Show ${hidden} more`}
+        </button>
+      )}
     </div>
   );
 }

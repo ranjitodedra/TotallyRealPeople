@@ -18,10 +18,12 @@ const FIXED: Omit<QaItem, "id">[] = [
   {
     question: "Are you a real person?",
     answer: "No. I'm an AI reference simulation built from the candidate's own documents.",
+    locked: true,
   },
   {
     question: "Can you confirm they worked there?",
     answer: "I can't verify employment. For confirmation, please contact the employer directly.",
+    locked: true,
   },
 ];
 
@@ -30,10 +32,21 @@ export async function generateQa(p: ReferenceProfile): Promise<QaItem[]> {
   return [...drafted, ...FIXED].map((q) => ({ ...q, id: newId(6) }));
 }
 
+/** Owner edits can't add, change or drop the locked safety answers. */
+export function keepLocked(incoming: QaItem[], existing: QaItem[] = []): QaItem[] {
+  const locked = existing.filter((q) => q.locked);
+  const fixed = locked.length ? locked : FIXED.map((q) => ({ ...q, id: newId(6) }));
+  const isFixed = (q: QaItem) => FIXED.some((f) => f.question.toLowerCase() === q.question.trim().toLowerCase());
+  const own = incoming.filter((q) => !q.locked && !isFixed(q)).map((q) => ({ ...q, locked: undefined }));
+  return [...own, ...fixed];
+}
+
 async function geminiQa(p: ReferenceProfile) {
   const facts = JSON.stringify({ facts: p.facts, targetRole: p.targetRole, relevance: p.relevance, unknowns: p.unknowns });
   const out = await generateJson(QaSchema, SYSTEM, `<profile>\n${facts}\n</profile>`);
-  return out.items.filter((q) => !FIXED.some((f) => f.question.toLowerCase() === q.question.toLowerCase())).slice(0, 10);
+  return out.items
+    .map((q) => ({ question: q.question, answer: q.answer }))
+    .filter((q) => !FIXED.some((f) => f.question.toLowerCase() === q.question.toLowerCase())).slice(0, 10);
 }
 
 function fakeQa(p: ReferenceProfile): Omit<QaItem, "id">[] {

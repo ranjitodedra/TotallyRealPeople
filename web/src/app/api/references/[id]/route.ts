@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { checkEditKey, getReference, saveReference } from "@/lib/store";
 import { toPublic } from "@/lib/types";
+import { keepLocked } from "@/lib/qa";
 
 export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]">) {
   const { id } = await ctx.params;
@@ -32,7 +33,7 @@ const Patch = z.object({
   unknowns: z.array(z.string()).optional(),
   manager: z.object({ name: z.string().min(1), title: z.string().min(1), company: z.string().min(1) }).optional(),
   qa: z
-    .array(z.object({ id: z.string().max(40), question: z.string().max(300), answer: z.string().max(1200) }))
+    .array(z.object({ id: z.string().max(40), question: z.string().max(300), answer: z.string().max(1200), locked: z.boolean().optional() }))
     .max(30)
     .optional(),
 });
@@ -48,6 +49,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/references/[id
   const parsed = Patch.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
   const next = { ...p, ...parsed.data };
+  if (parsed.data.qa) next.qa = keepLocked(parsed.data.qa, p.qa);
   await saveReference(next);
   return Response.json({ reference: toPublic(next, true) });
 }

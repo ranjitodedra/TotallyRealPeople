@@ -5,6 +5,7 @@ import { VoiceCall } from "@/components/voice-call";
 import { KnowledgePanel } from "@/components/knowledge-panel";
 import { EmailPanel } from "@/components/email-panel";
 import { ChatPanel } from "@/components/chat-panel";
+import { TuneAnswers } from "@/components/tune-answers";
 import { PersonaAvatar } from "@/components/brand";
 import { ArrowRight, Bot, Building2, Check, Copy, Mail, TriangleAlert } from "lucide-react";
 import type { PublicProfile } from "@/lib/types";
@@ -98,6 +99,7 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
 
           <VoiceCall referenceId={ref.id} managerName={ref.manager.name} />
           <ChatPanel referenceId={ref.id} managerName={ref.manager.name} />
+          {editKey && <TuneAnswers reference={ref} editKey={editKey} onSaved={update} />}
         </div>
 
         <div className="flex flex-col gap-4">
