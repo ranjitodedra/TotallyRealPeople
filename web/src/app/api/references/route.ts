@@ -6,6 +6,7 @@ import { createInbox } from "@/lib/agentboxd";
 import { generateQa } from "@/lib/qa";
 import { matchEmployer } from "@/lib/employers";
 import { toPublic, type ReferenceProfile } from "@/lib/types";
+import { normalizePhoneNumber, phoneInputPattern } from "@/lib/phone";
 
 const Body = z.object({
   resumeText: z.string().min(40, "The résumé looks too short.").max(40000),
@@ -22,12 +23,13 @@ const Body = z.object({
       habits: z.array(z.string().max(160)).max(6).optional(),
     })
     .optional(),
+  referencePhone: z.string().regex(phoneInputPattern, "Enter 10 digits, with or without hyphens."),
 });
 
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
-  const { resumeText, jobDescriptionText, personaId, manager, agent } = parsed.data;
+  const { resumeText, jobDescriptionText, personaId, manager, agent, referencePhone } = parsed.data;
   const persona = getPersona(personaId);
 
   let ex;
@@ -54,6 +56,7 @@ export async function POST(req: Request) {
       name: manager?.name?.trim() || persona.name,
       title: manager?.title?.trim() || persona.title,
       company: matchEmployer(manager?.company ?? "", ex.facts.roles.map((r) => r.company)) ?? ex.managerCompany,
+      phone: normalizePhoneNumber(referencePhone)!,
     },
     agent,
     voice: persona.voice,

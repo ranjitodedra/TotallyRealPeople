@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Stuff we did so far
 
 Checklist of everything built for Trust Me Bro, and what is still open.
@@ -69,3 +70,16 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [ ] More manager templates
 - [ ] Extra voices, then ElevenLabs
 - [ ] Rehearse the demo and record a fallback video
+=======
+# Done
+- Implemented fictional persona generation with fixture fallback, guarded email replies, linting, and Agentboxd inbox/message wrappers.
+- Added Fastify session endpoints, polling, SSE events, and a plain single-page client.
+- Added `.env.example`; `.env` remains ignored.
+
+# Next
+- Add `ANTHROPIC_API_KEY` to `.env` to enable generated personas and replies; otherwise fixtures and templates are used.
+- Start the server and run `npm run smoke` with an Agentboxd key that can create inboxes and send/read mail.
+
+# Open questions
+- The project directory has no Git metadata, so the requested commit cannot be created here.
+>>>>>>> 2c325ed (Email loop via Agentboxd)

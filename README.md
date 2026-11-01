@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Trust Me Bro (TotallyRealPeople)
 
 Your reference is ready to take the call.
@@ -55,3 +56,10 @@ Optional overrides: `GEMINI_TEXT_MODEL`, `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_API_V
 
 - Render: hosting for the app (and the phone bridge, if it ships)
 - Agentboxd: email inboxes for the AI references
+=======
+# RefBot
+Fictional reference-persona email loop for the LARPhacks demo.
+Copy `.env.example` to `.env` and fill in the three API settings.
+Run `npm install`, then `npm run dev` and open http://localhost:3000.
+Run `npm run smoke` for the live Agentboxd email loop.
+>>>>>>> 2c325ed (Email loop via Agentboxd)

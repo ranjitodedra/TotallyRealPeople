@@ -19,9 +19,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { JobPicker } from "@/components/job-picker";
+import { RefBotPanel } from "@/components/refbot-panel";
 import { guessEmployers } from "@/lib/employers";
 import { PERSONAS, getPersona, type PersonaTemplate } from "@/lib/personas";
 import { SAMPLE_RESUME } from "@/lib/samples";
+import { phoneInputPattern } from "@/lib/phone";
 
 export default function CreatePage() {
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function CreatePage() {
   const [custom, setCustom] = useState(() => customFrom(PERSONAS[0]));
   const [customOpen, setCustomOpen] = useState(false);
   const employers = useMemo(() => guessEmployers(resume), [resume]);
+  const [referencePhone, setReferencePhone] = useState("");
   const [busy, setBusy] = useState<null | "pdf" | "build">(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -57,12 +60,13 @@ export default function CreatePage() {
     setError(null);
     if (resume.trim().length < 40) return setError("Add a résumé first: upload a PDF or paste the text.");
     if (jd.trim().length < 20) return setError("Paste the job description first.");
+    if (!phoneInputPattern.test(referencePhone.trim())) return setError("Enter 10 digits, with or without hyphens.");
     setBusy("build");
     try {
       const res = await fetch("/api/references", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, personaId, ...customBody(getPersona(personaId), custom) }),
+        body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, personaId, referencePhone, ...customBody(getPersona(personaId), custom) }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
@@ -158,6 +162,11 @@ export default function CreatePage() {
           employers={employers}
           onReset={() => setCustom(customFrom(getPersona(personaId)))}
         />
+        <div className="flex flex-col items-start gap-2 text-sm font-medium">
+          <label htmlFor="reference-phone-number">Reference phone number</label>
+          <input id="reference-phone-number" className="field" type="tel" autoComplete="tel" required value={referencePhone} onChange={(e) => setReferencePhone(e.target.value)} placeholder="123-456-7890 or 1234567890" />
+          <button className="btn text-xs! py-1!" type="button" onClick={() => setReferencePhone("123-456-7890")}>Use sample number: 123-456-7890</button>
+        </div>
       </Section>
 
       <div className="flex flex-col gap-3 pb-6">
@@ -168,6 +177,7 @@ export default function CreatePage() {
         <p className="text-sm text-center text-[var(--on-page-2)]">Creates an AI simulation from the experience you provide.</p>
         {error && <p className="text-sm text-center text-[var(--danger)]">{error}</p>}
       </div>
+      <RefBotPanel resumeText={resume} jobDescriptionText={jd} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { checkEditKey, getReference, saveReference } from "@/lib/store";
 import { toPublic } from "@/lib/types";
 import { keepLocked } from "@/lib/qa";
+import { normalizePhoneNumber, phoneInputPattern } from "@/lib/phone";
 
 export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]">) {
   const { id } = await ctx.params;
@@ -31,7 +32,7 @@ const Patch = z.object({
   targetRole: z.object({ title: z.string(), company: z.string().optional(), priorities: z.array(z.string()) }).optional(),
   relevance: z.array(z.string()).optional(),
   unknowns: z.array(z.string()).optional(),
-  manager: z.object({ name: z.string().min(1), title: z.string().min(1), company: z.string().min(1) }).optional(),
+  manager: z.object({ name: z.string().min(1), title: z.string().min(1), company: z.string().min(1), phone: z.string().regex(phoneInputPattern).optional() }).optional(),
   qa: z
     .array(z.object({ id: z.string().max(40), question: z.string().max(300), answer: z.string().max(1200), locked: z.boolean().optional() }))
     .max(30)
@@ -50,6 +51,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/references/[id
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
   const next = { ...p, ...parsed.data };
   if (parsed.data.qa) next.qa = keepLocked(parsed.data.qa, p.qa);
+  if (parsed.data.manager?.phone) next.manager.phone = normalizePhoneNumber(parsed.data.manager.phone)!;
   await saveReference(next);
   return Response.json({ reference: toPublic(next, true) });
 }

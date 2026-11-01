@@ -67,7 +67,7 @@ export interface ReferenceProfile {
   unknowns: string[];
   personaId: string;
   /** The fictional manager. `company` is the résumé employer the persona is framed around. */
-  manager: { name: string; title: string; company: string };
+  manager: { name: string; title: string; company: string; phone?: string };
   voice: string;
   /** User edits to the persona's tone, focus areas and habits. */
   agent?: AgentCustom;

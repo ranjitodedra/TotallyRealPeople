@@ -37,6 +37,7 @@ Rules:
 - Copy facts from the résumé only. Never invent employers, titles, dates, numbers, or achievements.
 - Leave a date out if the résumé doesn't state it.
 - Achievements: short, specific, as written (max 5 per role, most relevant to the target role first).
+- targetRole.title: the concise job title only. Do not append the employer, department, or team; put the employer in targetRole.company when identifiable.
 - targetRole.priorities: the 4-6 things the job description cares about most.
 - relevance: 3-5 short lines linking documented experience to those priorities. Only link what is actually documented.
 - unknowns: 2-5 things a hiring manager might ask that the résumé can't answer (e.g. reason for leaving, salary, specific gaps, missing dates).
