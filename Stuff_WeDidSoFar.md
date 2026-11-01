@@ -39,7 +39,7 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [x] "What this reference knows" panel: roles, skills, target role, why they fit, can't verify
 - [x] Edit mode for the facts (only the creator's browser can edit, using an edit key)
 - [x] Email panel with thread list and "Send a test email (demo)"
-- [~] "Generate Larp" at the top of Tune answers: 3 made-up situations that fit the target company, plus blank answers filled in and existing ones adjusted (prompts in `web/prompts/larp.md`; tested in fake mode only)
+- [~] "Generate Larp" at the top of Tune answers: 3 made-up situations that fit the target company, plus blank answers filled in and existing ones adjusted (prompts in `web/prompts/larp.md`; tested in fake mode only). Turned off for now with `LARP_ENABLED` in `web/src/lib/features.ts`
 
 ## Server and AI
 

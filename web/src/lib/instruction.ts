@@ -1,3 +1,4 @@
+import { LARP_ENABLED } from "./features";
 import { isFilled, MANAGER, type Manager } from "./manager";
 import { promptSection } from "./prompt-file";
 import type { AgentCustom, Channel, ReferenceProfile } from "./types";
@@ -132,7 +133,7 @@ ${rows}
 
 /** "Generate Larp" stories. How to use them comes from web/prompts/larp.md ("## Reference rules"). */
 function larpSection(p: ReferenceProfile) {
-  const larps = p.larps ?? [];
+  const larps = LARP_ENABLED ? (p.larps ?? []) : [];
   if (larps.length === 0) return "";
   const rows = larps.map((l) => `- ${asData(l.title)}: ${asData(l.story)}`).join("\n");
   return `IMAGINED SITUATIONS

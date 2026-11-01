@@ -3,6 +3,7 @@
 import { Check, ChevronDown, Loader2, Lock, Plus, RefreshCw, SlidersHorizontal, Trash2, VenetianMask } from "lucide-react";
 import { useState } from "react";
 import { PanelTitle } from "./brand";
+import { LARP_ENABLED } from "@/lib/features";
 import type { LarpItem, PublicProfile, QaItem } from "@/lib/types";
 
 /**
@@ -123,13 +124,15 @@ export function TuneAnswers({
 
   return (
     <div className="card flex flex-col gap-4">
-      <LarpBlock
-        larps={reference.larps ?? []}
-        busy={busy}
-        larping={larping}
-        onGenerate={generateLarp}
-        onSave={(larps) => send(`/api/references/${reference.id}`, "PATCH", { larps })}
-      />
+      {LARP_ENABLED && (
+        <LarpBlock
+          larps={reference.larps ?? []}
+          busy={busy}
+          larping={larping}
+          onGenerate={generateLarp}
+          onSave={(larps) => send(`/api/references/${reference.id}`, "PATCH", { larps })}
+        />
+      )}
 
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -194,7 +197,7 @@ export function TuneAnswers({
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium">
                         {q.question}
-                        {q.larp && <LarpChip />}
+                        {LARP_ENABLED && q.larp && <LarpChip />}
                       </span>
                       {!isOpen &&
                         (blank ? (

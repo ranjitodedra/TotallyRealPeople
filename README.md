@@ -52,6 +52,8 @@ There is one demo manager. Everything about them (name, tone, habits, example an
 
 ## Changing the larp prompt
 
+**Turned off for now.** Set `LARP_ENABLED` in `web/src/lib/features.ts` to `true` to bring it back.
+
 "Generate Larp" (top of the Tune answers card) makes up situations that fit the target company, built from the résumé, and fills in and adjusts the tuned answers to match. The reference always tells these as imagined.
 
 Its prompts are in **`web/prompts/larp.md`**, with two sections: `## Generator` (what the button asks Gemini to write) and `## Reference rules` (how the reference talks about larps). Edit the text under each heading, but keep the two headings exactly as they are. The app re-reads the file on every request, so no restart is needed.
