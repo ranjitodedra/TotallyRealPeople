@@ -5,7 +5,7 @@ import type { Channel, ReferenceProfile } from "./types";
 export type Turn = { role: "user" | "model"; text: string };
 
 /** Text answer for chat and email. Falls back to a canned reply in fake mode. */
-export async function answerAsReference(p: ReferenceProfile, channel: Exclude<Channel, "voice">, history: Turn[]) {
+export async function answerAsReference(p: ReferenceProfile, channel: Exclude<Channel, "voice" | "phone">, history: Turn[]) {
   if (gemini()) return generateText(buildReferenceInstruction(p, channel), history);
   return fakeAnswer(p, channel, history.at(-1)?.text ?? "");
 }

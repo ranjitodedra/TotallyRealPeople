@@ -49,6 +49,11 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [x] Profiles saved to a JSON file (`web/.data/`), raw resume never sent to the browser
 - [~] Agentboxd: one inbox per reference, created at build time
 - [~] Agentboxd webhook: signature check, duplicate skip, auto-reply loop guard, reply in thread
+- [~] Twilio phone number, one number for calls and texts, answered by `PHONE_REFERENCE_ID` or the newest reference
+  - Calls: `/twiml/voice` says the AI disclosure, then a Media Stream to `/twiml/media` bridges to Gemini Live (`web/src/server.ts`, `web/src/phone/`). Bridge tested with a real Gemini key and a simulated Twilio stream; not yet with a real call
+  - Texts: `/twiml/sms` answers with the shared prompt builder, keeps a short per-number history, first reply starts with the AI disclosure
+  - Both webhooks check `X-Twilio-Signature`; new channels `phone` and `sms` in `instruction.ts` with their rules in code
+  - Run with `npm run dev:phone` + `ngrok http 3000`; setup in `README.md`, deploy in `web/RENDER.md`
 
 ## Look and feel
 
@@ -66,7 +71,7 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [ ] Get a Gemini API key and test voice and text end to end
 - [ ] Deploy `web/` to Render (needed for the Agentboxd webhook and the judges' link)
 - [ ] Get an Agentboxd key, register the webhook, send one real email
-- [ ] Phone number bridge (teammate is on it; see `NOTES.md`)
+- [ ] Phone number: set Twilio env vars and console webhooks, then make one real call and send one real text
 - [ ] More manager templates
 - [ ] Extra voices, then ElevenLabs
 - [ ] Rehearse the demo and record a fallback video

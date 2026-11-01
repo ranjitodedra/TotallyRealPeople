@@ -1,4 +1,5 @@
-export type Channel = "voice" | "email" | "chat";
+// "phone" and "sms" reach people through the shared Twilio number, who never see the reference page.
+export type Channel = "voice" | "email" | "chat" | "phone" | "sms";
 
 export interface CandidateRole {
   company: string;

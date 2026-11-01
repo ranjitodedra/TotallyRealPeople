@@ -54,6 +54,20 @@ export async function getReference(id: string) {
   return (await db()).get(id) ?? null;
 }
 
+/**
+ * Reads one reference straight from the JSON file, skipping the in-memory map.
+ * The phone bridge (src/server.ts) uses this: it may not share the map with Next's route handlers,
+ * and every save writes the whole file, so the file is always current.
+ */
+export async function readReferenceFromDisk(id: string) {
+  try {
+    const rows = JSON.parse(await fs.readFile(file(), "utf8")) as ReferenceProfile[];
+    return rows.find((r) => r.id === id) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function listReferences() {
   return [...(await db()).values()];
 }

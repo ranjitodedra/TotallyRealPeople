@@ -9,6 +9,13 @@ export const env = {
   agentboxdBaseUrl: process.env.AGENTBOXD_BASE_URL || "https://api.agentboxd.com",
   agentboxdWebhookSecret: process.env.AGENTBOXD_WEBHOOK_SECRET || "",
   dataDir: process.env.DATA_DIR || ".data",
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
+  // The public https origin Twilio calls (ngrok or Render). Used to check signatures and build the stream URL.
+  publicBaseUrl: (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, ""),
+  // Which reference answers the shared number. Empty means the newest one.
+  phoneReferenceId: process.env.PHONE_REFERENCE_ID || "",
 };
 
 export const hasGemini = () => env.geminiApiKey.length > 0;

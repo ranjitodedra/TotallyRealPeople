@@ -11,7 +11,7 @@ Dashboard → **New → Web Service** → this repo.
 | Root Directory | `web` |
 | Runtime | Node |
 | Build Command | `npm ci && npm run build` |
-| Start Command | `npm start` |
+| Start Command | `npm run start:phone` (app + Twilio call bridge; plain `npm start` works if you don't use the phone number) |
 
 Environment variables:
 
@@ -23,7 +23,20 @@ Environment variables:
 | `RENDER_API_KEY` | Account Settings → API Keys (lets the app start workflow runs) |
 | `RENDER_WORKFLOW_SLUG` | the workflow's slug from step 2, e.g. `trust-me-bro-workflows` |
 
+| `TWILIO_ACCOUNT_SID` | Twilio console → Account Info |
+| `TWILIO_AUTH_TOKEN` | Twilio console → Account Info (used to check webhook signatures) |
+| `TWILIO_PHONE_NUMBER` | the number, e.g. `+15551234567` |
+| `PUBLIC_BASE_URL` | `https://<web-service>.onrender.com` (must match the Twilio webhook URLs exactly) |
+| `PHONE_REFERENCE_ID` | optional: which reference answers the number (default: the newest) |
+
 Leave `RENDER_API_KEY` / `RENDER_WORKFLOW_SLUG` unset and email replies run inline instead.
+
+### Phone number on Render
+
+`npm run start:phone` runs `src/server.ts`: the Next app plus a WebSocket at `/twiml/media` for Twilio Media Streams, on Render's `PORT`.
+The bridge reads references from the same `.data` file as the app, which is why it is part of the web service and not a separate one.
+Then in the Twilio console, on the number: **A call comes in** → `https://<web-service>.onrender.com/twiml/voice` (POST), **A message comes in** → `https://<web-service>.onrender.com/twiml/sms` (POST).
+Free instances sleep and the first call can time out: open the app a minute before calling, or use a paid instance for the demo.
 
 ## 2. Workflow service (email replies)
 

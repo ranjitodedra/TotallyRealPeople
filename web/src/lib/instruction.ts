@@ -161,8 +161,11 @@ function asData(s: string) {
 // Chat and browser voice run on the reference page, which shows the "AI simulation" badge, so they
 // stay in character and only say they're an AI when asked. Email reaches people who never see that
 // page, so it always ends with the AI-simulation signature (added here, not in reference.md).
-// A phone bridge is like email: give it its own channel with an opening disclosure instead of reusing "voice".
+// Phone calls and texts to the shared Twilio number are the same: the disclosure is added in code
+// (TwiML <Say> plus the opening line for calls, a prefix on the first text), and these rules are here,
+// not in reference.md, so they can't drift out of sync with it.
 function channelRules(channel: Channel, p: ReferenceProfile, md: (heading: string) => string) {
+  const first = asData(p.facts.candidateName.split(" ")[0] || p.facts.candidateName);
   switch (channel) {
     case "voice":
       return md("Voice");
@@ -173,5 +176,31 @@ ${p.manager.name}
 ${p.manager.title} (AI reference simulation · TotallyRealPeople)`;
     case "chat":
       return md("Chat");
+    case "phone":
+      return `You are on a real phone call. The caller dialled a phone number and cannot see any web page.
+- The caller has been told this is an AI reference simulation. Never claim or imply you are a real person.
+- Speak naturally and briefly: one to three short sentences per turn, no lists, no markdown, no URLs.
+- If the line is unclear or you didn't catch something, ask the caller to repeat it.
+- If the caller wants to end the call, say a short goodbye.`;
+    case "sms":
+      return `You are answering text messages (SMS) sent to a phone number. The texter cannot see any web page.
+- They are told in your first reply that this is an AI reference simulation. Never claim or imply you are a real person.
+- Keep each reply under 480 characters: plain text, no markdown, no lists, no links.
+- Answer the question asked about ${first}. If a message isn't about ${first}, say briefly what you can help with.`;
   }
+}
+
+/** Spoken by Twilio before the bridge connects, so it is always the first thing a caller hears. */
+export const PHONE_DISCLOSURE = "You've reached an AI reference simulation from TotallyRealPeople. It is not a real person.";
+
+/** What the Live model is told to say when the call connects. Also names itself as an AI. */
+export function phoneGreeting(p: ReferenceProfile) {
+  const first = asData(p.facts.candidateName.split(" ")[0] || p.facts.candidateName);
+  return `(The call just connected and the caller heard that this is an AI reference simulation. Say, in your own voice: "Hi, this is the AI reference simulation of ${asData(p.manager.name)}. What would you like to know about ${first}?")`;
+}
+
+/** Put in front of the first text reply in each SMS conversation. */
+export function smsDisclosure(p: ReferenceProfile) {
+  const first = p.facts.candidateName.split(" ")[0] || p.facts.candidateName;
+  return `[AI reference simulation · TotallyRealPeople: an AI playing ${p.manager.name}, ${first}'s reference. Not a real person.]`;
 }
