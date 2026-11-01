@@ -54,6 +54,12 @@ export async function phoneReference() {
   return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
 }
 
+/** The shared number, if this reference is the one answering it. Shown on the reference page. */
+export async function phoneNumberFor(referenceId: string) {
+  if (!env.twilioPhoneNumber) return null;
+  return (await phoneReference())?.id === referenceId ? env.twilioPhoneNumber : null;
+}
+
 // The media-stream WebSocket can't carry our webhook signature check, so the voice webhook hands the
 // bridge a short-lived signed token (as a <Stream> <Parameter>) naming the reference to load.
 const TOKEN_TTL_MS = 2 * 60 * 1000;

@@ -7,7 +7,7 @@ import { EmailPanel } from "@/components/email-panel";
 import { ChatPanel } from "@/components/chat-panel";
 import { TuneAnswers } from "@/components/tune-answers";
 import { PersonaAvatar } from "@/components/brand";
-import { ArrowRight, Bot, Building2, Check, Copy, Mail, TriangleAlert } from "lucide-react";
+import { ArrowRight, Bot, Building2, Check, Copy, Mail, Phone, TriangleAlert } from "lucide-react";
 import type { PublicProfile } from "@/lib/types";
 
 export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
@@ -15,7 +15,9 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
   const [ref, setRef] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editKey, setEditKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"email" | "phone" | null>(null);
+  // The shared Twilio number, when this reference is the one answering it.
+  const [phone, setPhone] = useState<string | null>(null);
 
   // Some routes return the profile without the owner-only tuned answers and larps; keep the ones we have.
   const update = useCallback(
@@ -29,6 +31,7 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
       const body = await res.json();
       if (!res.ok) return setError(body.error);
       setRef(body.reference);
+      setPhone(body.phone ?? null);
     },
     [id],
   );
@@ -46,12 +49,11 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
   if (error) return <p className="pt-10 text-[var(--on-page-2)]">{error}</p>;
   if (!ref) return <p className="pt-10 text-[var(--on-page-2)]">Loading reference…</p>;
 
-  async function copyEmail() {
-    if (!ref?.email) return;
+  async function copy(what: "email" | "phone", text: string) {
     try {
-      await navigator.clipboard.writeText(ref.email.address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1500);
     } catch {}
   }
 
@@ -85,11 +87,24 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
               <div className="mt-3 flex items-center gap-2 text-sm">
                 <Mail size={16} className="muted flex-none" aria-label="Email" />
                 <code className="font-mono text-[13px] truncate">{ref.email.address}</code>
-                <button className="btn text-xs! py-0.5! px-2!" onClick={copyEmail}>
-                  {copied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
-                  {copied ? "Copied" : "Copy"}
+                <button className="btn text-xs! py-0.5! px-2!" onClick={() => copy("email", ref.email!.address)}>
+                  {copied === "email" ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
+                  {copied === "email" ? "Copied" : "Copy"}
                 </button>
                 {ref.email.provider === "demo" && <span className="chip">demo inbox</span>}
+              </div>
+            )}
+            {phone && (
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <Phone size={16} className="muted flex-none" aria-label="Phone" />
+                <a href={`tel:${phone}`} className="font-mono text-[13px] truncate">
+                  {formatPhone(phone)}
+                </a>
+                <button className="btn text-xs! py-0.5! px-2!" onClick={() => copy("phone", phone)}>
+                  {copied === "phone" ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
+                  {copied === "phone" ? "Copied" : "Copy"}
+                </button>
+                <span className="chip">call or text</span>
               </div>
             )}
             {ref.fakeExtraction && (
@@ -112,4 +127,10 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
       </div>
     </div>
   );
+}
+
+/** +15551234567 → +1 (555) 123-4567. Other countries stay as given. */
+function formatPhone(n: string) {
+  const m = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(n.replace(/[^\d+]/g, ""));
+  return m ? `+1 (${m[1]}) ${m[2]}-${m[3]}` : n;
 }

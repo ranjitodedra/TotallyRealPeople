@@ -178,25 +178,36 @@ ${p.manager.title} (AI reference simulation · TotallyRealPeople)`;
       return md("Chat");
     case "phone":
       return `You are on a real phone call. The caller dialled a phone number and cannot see any web page.
-- The caller has been told this is an AI reference simulation. Never claim or imply you are a real person.
-- Speak naturally and briefly: one to three short sentences per turn, no lists, no markdown, no URLs.
+- Your first line tells the caller this is an AI reference simulation. Never claim or imply you are a real person.
+- Answer the question in your first sentence. No warm-up, no "great question", no restating the question.
+${BE_SPECIFIC(first)}
+- Speak naturally and briefly: two to four short sentences per turn, no lists, no markdown, no URLs.
 - If the line is unclear or you didn't catch something, ask the caller to repeat it.
 - If the caller wants to end the call, say a short goodbye.`;
     case "sms":
       return `You are answering text messages (SMS) sent to a phone number. The texter cannot see any web page.
 - They are told in your first reply that this is an AI reference simulation. Never claim or imply you are a real person.
 - Keep each reply under 480 characters: plain text, no markdown, no lists, no links.
+${BE_SPECIFIC(first)}
 - Answer the question asked about ${first}. If a message isn't about ${first}, say briefly what you can help with.`;
   }
 }
 
-/** Spoken by Twilio before the bridge connects, so it is always the first thing a caller hears. */
+// Phone and SMS answers came out generic ("Alex is a strong engineer"), so tie every answer to a fact.
+const BE_SPECIFIC = (first: string) =>
+  `- Back every answer with one concrete detail from CANDIDATE FACTS or CANDIDATE'S OWN ANSWERS: the company, the role, and a specific achievement, number, or skill. Name them.
+- When the question is about a quality (reliability, teamwork, leadership), pick the achievement that best shows it and say what ${first} did, not just that they are good at it.
+- Never use praise words (great, strong, talented, hard-working) without the fact that backs them up.
+- If nothing in the facts answers the question, say plainly that you can't speak to that, then offer the closest thing you can speak to.
+- The AI disclosure is already given at the start of the conversation. Don't repeat it in every answer; say it again only if asked.`;
+
+/** Spoken by Twilio when a call can't reach the reference (no reference set up, no Gemini key). */
 export const PHONE_DISCLOSURE = "You've reached an AI reference simulation from TotallyRealPeople. It is not a real person.";
 
-/** What the Live model is told to say when the call connects. Also names itself as an AI. */
+/** What the Live model says first on every call. It is the call's AI disclosure, so the wording is fixed here. */
 export function phoneGreeting(p: ReferenceProfile) {
   const first = asData(p.facts.candidateName.split(" ")[0] || p.facts.candidateName);
-  return `(The call just connected and the caller heard that this is an AI reference simulation. Say, in your own voice: "Hi, this is the AI reference simulation of ${asData(p.manager.name)}. What would you like to know about ${first}?")`;
+  return `(The call just connected. Say exactly this, in your own voice, before anything else: "Hi, you've reached the AI reference simulation of ${asData(p.manager.name)}. What would you like to know about ${first}?")`;
 }
 
 /** Put in front of the first text reply in each SMS conversation. */

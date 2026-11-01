@@ -2,12 +2,16 @@ import { z } from "zod";
 import { checkEditKey, getReference, saveReference } from "@/lib/store";
 import { toPublic } from "@/lib/types";
 import { keepLocked } from "@/lib/qa";
+import { phoneNumberFor } from "@/lib/twilio";
 
 export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]">) {
   const { id } = await ctx.params;
   const p = await getReference(id);
   if (!p) return Response.json({ error: "Reference not found." }, { status: 404 });
-  return Response.json({ reference: toPublic(p, checkEditKey(p, req.headers.get("x-edit-key"))) });
+  return Response.json({
+    reference: toPublic(p, checkEditKey(p, req.headers.get("x-edit-key"))),
+    phone: await phoneNumberFor(p.id),
+  });
 }
 
 const Patch = z.object({
