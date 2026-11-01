@@ -15,6 +15,7 @@ See [Stuff_WeDidSoFar.md](Stuff_WeDidSoFar.md) for a checklist of what is done a
 | `web/` | Next.js app: create screen, reference desk, API routes |
 | `web/src/lib/manager.ts` | The one demo manager: tone, examples, sample answers |
 | `web/prompts/larp.md` | Prompts for "Generate Larp" (edit freely) |
+| `web/prompts/reference.md` | How the reference answers: identity, boundaries, voice/chat/email rules (edit freely) |
 | `NOTES.md` | Team notes: voice plan reuse, phone bridge, email flow |
 | `voice-tutor-systems-plan.md` | Reference design for the Gemini Live voice loop |
 | `Stuff_WeDidSoFar.md` | Progress checklist |
