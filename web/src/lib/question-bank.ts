@@ -1,7 +1,7 @@
 import type { PersonaTemplate } from "./personas";
 
 /** Marks a sample answer nobody has written yet. */
-export const PLACEHOLDER = "[TO_BE_GTEXT]";
+export const PLACEHOLDER = "[PLACEHOLDER_GTEXT]";
 
 export interface BankQuestion {
   /** Stable key that persona files use to override an answer. */
