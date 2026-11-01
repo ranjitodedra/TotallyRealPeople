@@ -1,5 +1,6 @@
-import { getMessage, replyToMessage, verifyWebhook } from "@/lib/agentboxd";
-import { handleInboundEmail, isAutomated } from "@/lib/email-flow";
+import { after } from "next/server";
+import { getMessage, verifyWebhook } from "@/lib/agentboxd";
+import { isAutomated, recordInbound, replyToInbound } from "@/lib/email-flow";
 import { findByEmail, findByInboxId } from "@/lib/store";
 
 // Agentboxd `message.received` webhook. Register with:
@@ -41,13 +42,17 @@ export async function POST(req: Request) {
   }
   if (isAutomated(from, subject, p.email?.address)) return Response.json({ ok: true, ignored: "automated" });
 
-  try {
-    const r = await handleInboundEmail(p, { from, subject, text, providerMessageId: messageId }, (reply) =>
-      replyToMessage(inboxId, messageId, reply),
-    );
-    return Response.json({ ok: true, duplicate: r.duplicate });
-  } catch (e) {
-    console.error("email webhook failed", e);
-    return Response.json({ error: "reply failed" }, { status: 500 });
-  }
+  const inbound = { from, subject, text, providerMessageId: messageId };
+  const recorded = await recordInbound(p, inbound);
+  if (!recorded) return Response.json({ ok: true, duplicate: true });
+
+  // Answer after responding, so Agentboxd isn't kept waiting (a workflow run can take a while to start).
+  after(async () => {
+    try {
+      await replyToInbound(p, inbound, { inboxId, messageId });
+    } catch (e) {
+      console.error("email reply failed", e);
+    }
+  });
+  return Response.json({ ok: true, queued: true });
 }

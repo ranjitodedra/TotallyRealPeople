@@ -33,6 +33,8 @@ export interface EmailMessage {
   /** Provider message id, used to skip duplicate webhook deliveries. */
   providerMessageId?: string;
   demo?: boolean;
+  /** Render Workflows run that wrote and sent this reply, if any. */
+  workflowRunId?: string;
 }
 
 /** A likely hiring-manager question with an answer the candidate wrote or approved. */

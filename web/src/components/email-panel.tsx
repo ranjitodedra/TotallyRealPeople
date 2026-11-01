@@ -65,7 +65,12 @@ export function EmailPanel({ reference, onUpdated }: { reference: PublicProfile;
                       m.from
                     )}
                   </span>
-                  {m.demo && <span className="chip ml-auto">demo</span>}
+                  {m.workflowRunId && (
+                    <span className="chip ml-auto" title={`Render Workflows run ${m.workflowRunId}`}>
+                      via Render Workflow
+                    </span>
+                  )}
+                  {m.demo && <span className={`chip ${m.workflowRunId ? "" : "ml-auto"}`}>demo</span>}
                 </div>
                 <div className="muted truncate">{m.subject}</div>
               </button>

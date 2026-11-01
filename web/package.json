@@ -6,14 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "workflows": "tsx src/workflows/main.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
+    "@renderinc/sdk": "^1.6.0",
     "lucide-react": "^1.57.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "tsx": "^4.23.15",
     "unpdf": "^2.1.0",
     "zod": "^4.6.7"
   },
