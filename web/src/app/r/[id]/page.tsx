@@ -16,19 +16,27 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
   const [editKey, setEditKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const load = useCallback(async () => {
-    const res = await fetch(`/api/references/${id}`);
-    const body = await res.json();
-    if (!res.ok) return setError(body.error);
-    setRef(body.reference);
-  }, [id]);
+  // Some routes return the profile without the owner-only tuned answers; keep the ones we have.
+  const update = useCallback((next: PublicProfile) => setRef((prev) => ({ ...next, qa: next.qa ?? prev?.qa })), []);
+
+  const load = useCallback(
+    async (key: string | null) => {
+      const res = await fetch(`/api/references/${id}`, { headers: key ? { "x-edit-key": key } : {} });
+      const body = await res.json();
+      if (!res.ok) return setError(body.error);
+      setRef(body.reference);
+    },
+    [id],
+  );
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
+    let key: string | null = null;
     try {
-      setEditKey(localStorage.getItem(`trp-edit-${id}`));
+      key = localStorage.getItem(`trp-edit-${id}`);
     } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEditKey(key);
+    void load(key);
   }, [id, load]);
 
   if (error) return <p className="pt-10 text-[var(--on-page-2)]">{error}</p>;
@@ -93,8 +101,8 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
         </div>
 
         <div className="flex flex-col gap-4">
-          <KnowledgePanel reference={ref} editKey={editKey} onSaved={setRef} />
-          <EmailPanel reference={ref} onUpdated={setRef} />
+          <KnowledgePanel reference={ref} editKey={editKey} onSaved={update} />
+          <EmailPanel reference={ref} onUpdated={update} />
         </div>
       </div>
     </div>

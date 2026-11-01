@@ -2,11 +2,11 @@ import { z } from "zod";
 import { checkEditKey, getReference, saveReference } from "@/lib/store";
 import { toPublic } from "@/lib/types";
 
-export async function GET(_req: Request, ctx: RouteContext<"/api/references/[id]">) {
+export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]">) {
   const { id } = await ctx.params;
   const p = await getReference(id);
   if (!p) return Response.json({ error: "Reference not found." }, { status: 404 });
-  return Response.json({ reference: toPublic(p) });
+  return Response.json({ reference: toPublic(p, checkEditKey(p, req.headers.get("x-edit-key"))) });
 }
 
 const Patch = z.object({
@@ -31,6 +31,10 @@ const Patch = z.object({
   relevance: z.array(z.string()).optional(),
   unknowns: z.array(z.string()).optional(),
   manager: z.object({ name: z.string().min(1), title: z.string().min(1), company: z.string().min(1) }).optional(),
+  qa: z
+    .array(z.object({ id: z.string().max(40), question: z.string().max(300), answer: z.string().max(1200) }))
+    .max(30)
+    .optional(),
 });
 
 // Owner edits. Requires the edit key returned at creation (kept in the creator's browser).
@@ -45,5 +49,5 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/references/[id
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
   const next = { ...p, ...parsed.data };
   await saveReference(next);
-  return Response.json({ reference: toPublic(next) });
+  return Response.json({ reference: toPublic(next, true) });
 }

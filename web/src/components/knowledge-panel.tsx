@@ -3,6 +3,7 @@
 import { Brain, BriefcaseBusiness, Link2, Pencil, Plus, Save, ShieldQuestion, Target, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
 import { PanelTitle } from "./brand";
+import { TuneAnswers } from "./tune-answers";
 import type { CandidateRole, PublicProfile } from "@/lib/types";
 
 const lines = (s: string) =>
@@ -193,9 +194,12 @@ export function KnowledgePanel({
           What this reference knows
         </PanelTitle>
         {editKey && (
-          <button className="btn text-xs! py-1!" onClick={startEdit}>
-            <Pencil size={13} aria-hidden /> Edit
-          </button>
+          <div className="flex gap-2">
+            <TuneAnswers reference={reference} editKey={editKey} onSaved={onSaved} />
+            <button className="btn text-xs! py-1!" onClick={startEdit}>
+              <Pencil size={13} aria-hidden /> Edit
+            </button>
+          </div>
         )}
       </div>
 

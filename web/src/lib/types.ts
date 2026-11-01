@@ -35,6 +35,14 @@ export interface EmailMessage {
   demo?: boolean;
 }
 
+/** A likely hiring-manager question with an answer the candidate wrote or approved. */
+export interface QaItem {
+  id: string;
+  question: string;
+  /** Empty means "not answered yet": the bot says it doesn't have that information. */
+  answer: string;
+}
+
 export interface ReferenceProfile {
   id: string;
   createdAt: string;
@@ -52,17 +60,19 @@ export interface ReferenceProfile {
   voice: string;
   email?: { address: string; inboxId?: string; provider: "agentboxd" | "demo" };
   messages: EmailMessage[];
+  /** Tuned answers from the "Tune answers" menu. */
+  qa?: QaItem[];
   /** True when facts came from the rule-based fallback instead of Gemini. */
   fakeExtraction?: boolean;
   /** sha256 of the owner edit key. Never sent to the browser. */
   editKeyHash?: string;
 }
 
-/** What the browser is allowed to see (no raw résumé/JD text). */
+/** What the browser is allowed to see (no raw résumé/JD text; tuned answers only for the owner). */
 export type PublicProfile = Omit<ReferenceProfile, "resumeText" | "jobDescriptionText" | "editKeyHash">;
 
-export function toPublic(p: ReferenceProfile): PublicProfile {
+export function toPublic(p: ReferenceProfile, owner = false): PublicProfile {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { resumeText, jobDescriptionText, editKeyHash, ...rest } = p;
-  return rest;
+  const { resumeText, jobDescriptionText, editKeyHash, qa, ...rest } = p;
+  return owner ? { ...rest, qa } : rest;
 }

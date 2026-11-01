@@ -26,7 +26,10 @@ export async function handleInboundEmail(
   await saveReference(p);
 
   const reply = await answerAsReference(p, "email", [
-    { role: "user", text: `From: ${inbound.from}\nSubject: ${inbound.subject}\n\n${inMsg.text}` },
+    {
+      role: "user",
+      text: `<incoming_email>\nFrom: ${inbound.from}\nSubject: ${inbound.subject}\n\n${inMsg.text.replace(/<\/?incoming_email>/gi, "")}\n</incoming_email>`,
+    },
   ]);
   if (send) await send(reply);
 

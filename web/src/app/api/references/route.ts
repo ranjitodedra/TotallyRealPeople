@@ -3,6 +3,7 @@ import { extractProfile } from "@/lib/extract";
 import { getPersona } from "@/lib/personas";
 import { hashKey, newId, saveReference } from "@/lib/store";
 import { createInbox } from "@/lib/agentboxd";
+import { generateQa } from "@/lib/qa";
 import { toPublic, type ReferenceProfile } from "@/lib/types";
 
 const Body = z.object({
@@ -55,6 +56,13 @@ export async function POST(req: Request) {
     profile.email = { address: `${username}@demo.totallyrealpeople`, provider: "demo" };
   }
 
+  try {
+    profile.qa = await generateQa(profile);
+  } catch (e) {
+    console.error("qa generate failed", e);
+    profile.qa = [];
+  }
+
   await saveReference(profile);
-  return Response.json({ reference: toPublic(profile), editKey });
+  return Response.json({ reference: toPublic(profile, true), editKey });
 }
