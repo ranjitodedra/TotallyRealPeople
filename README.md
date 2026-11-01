@@ -13,6 +13,8 @@ See [Stuff_WeDidSoFar.md](Stuff_WeDidSoFar.md) for a checklist of what is done a
 | Path | What it is |
 | --- | --- |
 | `web/` | Next.js app: create screen, reference desk, API routes |
+| `web/src/lib/manager.ts` | The one demo manager: tone, examples, sample answers |
+| `web/prompts/larp.md` | Prompts for "Generate Larp" (edit freely) |
 | `NOTES.md` | Team notes: voice plan reuse, phone bridge, email flow |
 | `voice-tutor-systems-plan.md` | Reference design for the Gemini Live voice loop |
 | `Stuff_WeDidSoFar.md` | Progress checklist |
@@ -46,6 +48,12 @@ Optional overrides: `GEMINI_TEXT_MODEL`, `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_API_V
 ## Changing the manager
 
 There is one demo manager. Everything about them (name, tone, habits, example answers, sample answers to 30 likely questions) is in `web/src/lib/manager.ts`. Replace each `[PLACEHOLDER_GTEXT]` with a sample answer. The safety rules in `web/src/lib/instruction.ts` always win over that file.
+
+## Changing the larp prompt
+
+"Generate Larp" (top of the Tune answers card) makes up situations that fit the target company, built from the résumé, and fills in and adjusts the tuned answers to match. The reference always tells these as imagined.
+
+Its prompts are in **`web/prompts/larp.md`**, with two sections: `## Generator` (what the button asks Gemini to write) and `## Reference rules` (how the reference talks about larps). Edit the text under each heading, but keep the two headings exactly as they are. The app re-reads the file on every request, so no restart is needed.
 
 ## How it works
 

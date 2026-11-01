@@ -33,8 +33,12 @@ const Patch = z.object({
   unknowns: z.array(z.string()).optional(),
   manager: z.object({ name: z.string().min(1), title: z.string().min(1), company: z.string().min(1) }).optional(),
   qa: z
-    .array(z.object({ id: z.string().max(40), question: z.string().max(300), answer: z.string().max(1200), locked: z.boolean().optional() }))
+    .array(z.object({ id: z.string().max(40), question: z.string().max(300), answer: z.string().max(1200), locked: z.boolean().optional(), larp: z.boolean().optional() }))
     .max(30)
+    .optional(),
+  larps: z
+    .array(z.object({ id: z.string().max(40), title: z.string().min(1).max(120), story: z.string().min(1).max(1200) }))
+    .max(12)
     .optional(),
 });
 

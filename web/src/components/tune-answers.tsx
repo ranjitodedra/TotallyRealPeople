@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, ChevronDown, Lock, Plus, RefreshCw, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Loader2, Lock, Plus, RefreshCw, SlidersHorizontal, Trash2, VenetianMask } from "lucide-react";
 import { useState } from "react";
 import { PanelTitle } from "./brand";
-import type { PublicProfile, QaItem } from "@/lib/types";
+import type { LarpItem, PublicProfile, QaItem } from "@/lib/types";
 
 /**
  * Owner-only card: auto-generated likely questions with answers the candidate can edit.
@@ -22,6 +22,7 @@ export function TuneAnswers({
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ question: "", answer: "" });
   const [busy, setBusy] = useState(false);
+  const [larping, setLarping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const editable = items.filter((q) => !q.locked);
@@ -75,6 +76,12 @@ export function TuneAnswers({
     setOpenId(`new-${crypto.randomUUID().slice(0, 8)}`);
   }
 
+  async function generateLarp() {
+    setLarping(true);
+    if (await send(`/api/references/${reference.id}/larp`, "POST")) setOpenId(null);
+    setLarping(false);
+  }
+
   async function regenerate() {
     if (items.length && !confirm("Replace all questions and answers with a fresh generated set?")) return;
     if (await send(`/api/references/${reference.id}/qa`, "POST")) setOpenId(null);
@@ -116,6 +123,14 @@ export function TuneAnswers({
 
   return (
     <div className="card flex flex-col gap-4">
+      <LarpBlock
+        larps={reference.larps ?? []}
+        busy={busy}
+        larping={larping}
+        onGenerate={generateLarp}
+        onSave={(larps) => send(`/api/references/${reference.id}`, "PATCH", { larps })}
+      />
+
       <div className="flex items-start justify-between gap-3">
         <div>
           <PanelTitle icon={SlidersHorizontal} tint="#e3f4fd" color="#1899d6">
@@ -177,7 +192,10 @@ export function TuneAnswers({
                     aria-expanded={isOpen}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{q.question}</span>
+                      <span className="block font-medium">
+                        {q.question}
+                        {q.larp && <LarpChip />}
+                      </span>
                       {!isOpen &&
                         (blank ? (
                           <span className="inline-block mt-1 text-xs rounded-full px-2 py-0.5 bg-[var(--amber-bg)] text-[var(--amber-ink)]">
@@ -213,6 +231,129 @@ export function TuneAnswers({
         </button>
       )}
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+    </div>
+  );
+}
+
+function LarpChip() {
+  return (
+    <span className="ml-1.5 inline-block align-middle text-[11px] font-medium rounded-full px-2 py-0.5 bg-[var(--p-purple)] text-[#4b2d86]">
+      Larp
+    </span>
+  );
+}
+
+/**
+ * "Generate Larp": imagined situations that fit the target company, built from the résumé.
+ * Generating also fills in and adjusts the tuned answers below. Prompt: web/prompts/larp.md.
+ */
+function LarpBlock({
+  larps,
+  busy,
+  larping,
+  onGenerate,
+  onSave,
+}: {
+  larps: LarpItem[];
+  busy: boolean;
+  larping: boolean;
+  onGenerate: () => void;
+  onSave: (larps: LarpItem[]) => Promise<boolean>;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ title: "", story: "" });
+
+  function open(l: LarpItem) {
+    if (openId === l.id) return setOpenId(null);
+    setDraft({ title: l.title, story: l.story });
+    setOpenId(l.id);
+  }
+
+  async function save(id: string) {
+    if (!draft.title.trim() || !draft.story.trim()) return;
+    const next = larps.map((l) => (l.id === id ? { ...l, title: draft.title.trim(), story: draft.story.trim() } : l));
+    if (await onSave(next)) setOpenId(null);
+  }
+
+  async function remove(id: string) {
+    if (await onSave(larps.filter((l) => l.id !== id))) setOpenId(null);
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-[var(--p-purple)] bg-[#f6f1fd] p-4 flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <PanelTitle icon={VenetianMask} tint="#ebe1fa" color="#6b46b8">
+            Generate Larp
+          </PanelTitle>
+          <p className="text-sm muted mt-1.5">
+            Made-up situations that fit the job, built from your résumé. Also fills in and polishes your answers below. The
+            reference always tells these as imagined.
+          </p>
+        </div>
+        <button className="btn btn-primary text-sm! py-1.5! flex-none" onClick={onGenerate} disabled={busy}>
+          {larping ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <VenetianMask size={15} aria-hidden />}
+          {larping ? "Larping…" : "Generate Larp"}
+        </button>
+      </div>
+
+      {larps.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {larps.map((l) => {
+            const isOpen = openId === l.id;
+            return (
+              <li
+                key={l.id}
+                className={`rounded-2xl border-2 px-3 py-2.5 text-sm bg-white ${isOpen ? "border-[var(--blue)]" : "border-[var(--line)]"}`}
+              >
+                <button className="w-full flex items-start gap-2 text-left" onClick={() => open(l)} aria-expanded={isOpen}>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">
+                      {l.title}
+                      <LarpChip />
+                    </span>
+                    {!isOpen && <span className="block muted">{l.story}</span>}
+                  </span>
+                  <ChevronDown
+                    size={18}
+                    className={`muted flex-none mt-0.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+                {isOpen && (
+                  <div className="flex flex-col gap-2 pt-2">
+                    <input
+                      className="field font-medium"
+                      value={draft.title}
+                      aria-label="Larp title"
+                      maxLength={120}
+                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                    />
+                    <textarea
+                      className="field min-h-20"
+                      value={draft.story}
+                      aria-label="Larp story"
+                      maxLength={1200}
+                      onChange={(e) => setDraft({ ...draft, story: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <button className="btn btn-primary text-sm! py-1.5!" onClick={() => save(l.id)} disabled={busy}>
+                        <Check size={15} aria-hidden /> {busy ? "Saving…" : "Save"}
+                      </button>
+                      <button className="btn text-sm! py-1.5!" onClick={() => setOpenId(null)}>
+                        Cancel
+                      </button>
+                      <button className="btn btn-danger text-sm! py-1.5! ml-auto" onClick={() => remove(l.id)} disabled={busy}>
+                        <Trash2 size={14} aria-hidden /> Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

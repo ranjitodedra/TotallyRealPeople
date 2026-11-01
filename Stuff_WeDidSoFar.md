@@ -27,7 +27,7 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [x] Step 2, Job: textarea plus an "Or use a template" dropdown
 - [x] Job templates: Scotiabank (Full Stack Engineer) and Stripe (Software Engineer Intern)
 - [x] (i) button on each template opens the full posting in a centered popup with "Use this job"
-- [x] Step 3, Manager template: The Technical Manager (Dana Okafor)
+- [x] Step 3, Manager template: The Technical Manager (Dana Okafor), the only manager for the demo; all of it is in `web/src/lib/manager.ts`
 - [x] "Build my reference" button with loading state and error messages
 
 ## Screen 2: Reference desk (`/r/<id>`)
@@ -39,6 +39,7 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [x] "What this reference knows" panel: roles, skills, target role, why they fit, can't verify
 - [x] Edit mode for the facts (only the creator's browser can edit, using an edit key)
 - [x] Email panel with thread list and "Send a test email (demo)"
+- [~] "Generate Larp" at the top of Tune answers: 3 made-up situations that fit the target company, plus blank answers filled in and existing ones adjusted (prompts in `web/prompts/larp.md`; tested in fake mode only)
 
 ## Server and AI
 

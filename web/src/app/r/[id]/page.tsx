@@ -17,8 +17,11 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
   const [editKey, setEditKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Some routes return the profile without the owner-only tuned answers; keep the ones we have.
-  const update = useCallback((next: PublicProfile) => setRef((prev) => ({ ...next, qa: next.qa ?? prev?.qa })), []);
+  // Some routes return the profile without the owner-only tuned answers and larps; keep the ones we have.
+  const update = useCallback(
+    (next: PublicProfile) => setRef((prev) => ({ ...next, qa: next.qa ?? prev?.qa, larps: next.larps ?? prev?.larps })),
+    [],
+  );
 
   const load = useCallback(
     async (key: string | null) => {

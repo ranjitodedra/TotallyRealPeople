@@ -45,6 +45,15 @@ export interface QaItem {
   answer: string;
   /** Fixed safety answers. Shown to the owner but never editable. */
   locked?: boolean;
+  /** Written or adjusted by "Generate Larp": imagined, so the bot frames it that way. */
+  larp?: boolean;
+}
+
+/** A made-up work situation ("larp") the reference can tell, always framed as imagined. */
+export interface LarpItem {
+  id: string;
+  title: string;
+  story: string;
 }
 
 /** The user's edits to the persona's style, layered on top of the template. */
@@ -74,17 +83,19 @@ export interface ReferenceProfile {
   messages: EmailMessage[];
   /** Tuned answers from the "Tune answers" menu. */
   qa?: QaItem[];
+  /** Imagined situations from "Generate Larp". */
+  larps?: LarpItem[];
   /** True when facts came from the rule-based fallback instead of Gemini. */
   fakeExtraction?: boolean;
   /** sha256 of the owner edit key. Never sent to the browser. */
   editKeyHash?: string;
 }
 
-/** What the browser is allowed to see (no raw résumé/JD text; tuned answers only for the owner). */
+/** What the browser is allowed to see (no raw résumé/JD text; tuned answers and larps only for the owner). */
 export type PublicProfile = Omit<ReferenceProfile, "resumeText" | "jobDescriptionText" | "editKeyHash">;
 
 export function toPublic(p: ReferenceProfile, owner = false): PublicProfile {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { resumeText, jobDescriptionText, editKeyHash, qa, ...rest } = p;
-  return owner ? { ...rest, qa } : rest;
+  const { resumeText, jobDescriptionText, editKeyHash, qa, larps, ...rest } = p;
+  return owner ? { ...rest, qa, larps } : rest;
 }
