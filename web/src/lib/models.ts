@@ -5,7 +5,7 @@ import type { ReferenceProfile } from "./types";
  * Which AI answers each kind of conversation.
  *   text  = chat, email replies, SMS answers
  *   voice = the browser "Call Dana" call and the Twilio phone bridge
- * Defaults come from TEXT_PROVIDER / VOICE_PROVIDER (Grok for both), and each
+ * Defaults come from TEXT_PROVIDER / VOICE_PROVIDER (Grok for text, ElevenLabs for voice), and each
  * reference can override them from the reference desk. Résumé extraction always uses Gemini.
  * ElevenLabs is voice only: it speaks what its agent's LLM (Grok) writes.
  */
@@ -32,7 +32,7 @@ const asProvider = (s: string, kind: ModelKind, fallback: Provider): Provider =>
 
 export const DEFAULT_MODELS: Record<ModelKind, Provider> = {
   text: asProvider(env.textProvider, "text", "grok"),
-  voice: asProvider(env.voiceProvider, "voice", "grok"),
+  voice: asProvider(env.voiceProvider, "voice", "elevenlabs"),
 };
 
 export function hasProvider(p: Provider) {

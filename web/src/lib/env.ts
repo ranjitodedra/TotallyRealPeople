@@ -17,7 +17,7 @@ export const env = {
   // Which provider answers text (chat, email, SMS) and voice (browser call, phone) by default.
   // Each reference can override this from the reference desk. See lib/models.ts.
   textProvider: process.env.TEXT_PROVIDER || "grok",
-  voiceProvider: process.env.VOICE_PROVIDER || "grok",
+  voiceProvider: process.env.VOICE_PROVIDER || "elevenlabs",
   agentboxdApiKey: process.env.AGENTBOXD_API_KEY || "",
   agentboxdBaseUrl: process.env.AGENTBOXD_BASE_URL || "https://api.agentboxd.com",
   agentboxdWebhookSecret: process.env.AGENTBOXD_WEBHOOK_SECRET || "",
