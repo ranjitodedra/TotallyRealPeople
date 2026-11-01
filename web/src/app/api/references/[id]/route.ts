@@ -1,0 +1,49 @@
+import { z } from "zod";
+import { checkEditKey, getReference, saveReference } from "@/lib/store";
+import { toPublic } from "@/lib/types";
+
+export async function GET(_req: Request, ctx: RouteContext<"/api/references/[id]">) {
+  const { id } = await ctx.params;
+  const p = await getReference(id);
+  if (!p) return Response.json({ error: "Reference not found." }, { status: 404 });
+  return Response.json({ reference: toPublic(p) });
+}
+
+const Patch = z.object({
+  facts: z
+    .object({
+      candidateName: z.string().min(1),
+      headline: z.string().optional(),
+      roles: z.array(
+        z.object({
+          company: z.string(),
+          title: z.string(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          achievements: z.array(z.string()),
+        }),
+      ),
+      skills: z.array(z.string()),
+      education: z.array(z.string()),
+    })
+    .optional(),
+  targetRole: z.object({ title: z.string(), company: z.string().optional(), priorities: z.array(z.string()) }).optional(),
+  relevance: z.array(z.string()).optional(),
+  unknowns: z.array(z.string()).optional(),
+  manager: z.object({ name: z.string().min(1), title: z.string().min(1), company: z.string().min(1) }).optional(),
+});
+
+// Owner edits. Requires the edit key returned at creation (kept in the creator's browser).
+export async function PATCH(req: Request, ctx: RouteContext<"/api/references/[id]">) {
+  const { id } = await ctx.params;
+  const p = await getReference(id);
+  if (!p) return Response.json({ error: "Reference not found." }, { status: 404 });
+  if (!checkEditKey(p, req.headers.get("x-edit-key"))) {
+    return Response.json({ error: "Only the creator can edit this reference." }, { status: 403 });
+  }
+  const parsed = Patch.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  const next = { ...p, ...parsed.data };
+  await saveReference(next);
+  return Response.json({ reference: toPublic(next) });
+}

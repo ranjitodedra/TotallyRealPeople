@@ -1,0 +1,97 @@
+"use client";
+
+import { use, useCallback, useEffect, useState } from "react";
+import { VoiceCall } from "@/components/voice-call";
+import { KnowledgePanel } from "@/components/knowledge-panel";
+import { EmailPanel } from "@/components/email-panel";
+import { ChatPanel } from "@/components/chat-panel";
+import { PersonaAvatar } from "@/components/brand";
+import type { PublicProfile } from "@/lib/types";
+
+export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
+  const { id } = use(params);
+  const [ref, setRef] = useState<PublicProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [editKey, setEditKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/references/${id}`);
+    const body = await res.json();
+    if (!res.ok) return setError(body.error);
+    setRef(body.reference);
+  }, [id]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+    try {
+      setEditKey(localStorage.getItem(`trp-edit-${id}`));
+    } catch {}
+  }, [id, load]);
+
+  if (error) return <p className="pt-10 text-[var(--on-page-2)]">{error}</p>;
+  if (!ref) return <p className="pt-10 text-[var(--on-page-2)]">Loading reference…</p>;
+
+  async function copyEmail() {
+    if (!ref?.email) return;
+    try {
+      await navigator.clipboard.writeText(ref.email.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  }
+
+  return (
+    <div className="flex flex-col gap-6 pt-4">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+        <div className="flex flex-col gap-4">
+          <div className="card">
+            <div className="flex items-center gap-3">
+              <PersonaAvatar name={ref.manager.name} />
+              <div className="min-w-0">
+                <div className="font-semibold text-xl leading-tight">{ref.manager.name}</div>
+                <div className="text-sm muted">
+                  {ref.manager.title} · {ref.manager.company}
+                </div>
+              </div>
+              <span className="badge-sim ml-auto">AI simulation</span>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-sm text-[var(--green-ink)]">
+              <span className="dot" /> Available. Suspiciously prepared.
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <span className="muted">Reference for</span>
+              <span className="font-medium">{ref.facts.candidateName}</span>
+              <span className="muted">→</span>
+              <span className="font-medium">{ref.targetRole.title}</span>
+            </div>
+            {ref.email && (
+              <div className="mt-3 flex items-center gap-2 text-sm">
+                <span className="muted">Email</span>
+                <code className="font-mono text-[13px] truncate">{ref.email.address}</code>
+                <button className="btn text-xs! py-0.5! px-2!" onClick={copyEmail}>
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                {ref.email.provider === "demo" && <span className="chip">demo inbox</span>}
+              </div>
+            )}
+            {ref.fakeExtraction && (
+              <p className="mt-3 text-xs rounded-xl px-3 py-2 bg-[var(--amber-bg)] text-[var(--amber-ink)]">
+                Fake mode: facts came from a simple parser. Add GEMINI_API_KEY for real extraction and answers.
+              </p>
+            )}
+          </div>
+
+          <VoiceCall referenceId={ref.id} managerName={ref.manager.name} />
+          <ChatPanel referenceId={ref.id} managerName={ref.manager.name} />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <KnowledgePanel reference={ref} editKey={editKey} onSaved={setRef} />
+          <EmailPanel reference={ref} onUpdated={setRef} />
+        </div>
+      </div>
+    </div>
+  );
+}
