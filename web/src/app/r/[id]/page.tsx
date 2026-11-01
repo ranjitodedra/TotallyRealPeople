@@ -54,8 +54,8 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
 
   return (
     <div className="flex flex-col gap-6 pt-4">
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <div className="flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-4 min-w-0">
           <div className="card">
             <div className="flex items-center gap-3">
               <PersonaAvatar name={ref.manager.name} />
@@ -102,7 +102,7 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
           {editKey && <TuneAnswers reference={ref} editKey={editKey} onSaved={update} />}
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 min-w-0">
           <KnowledgePanel reference={ref} editKey={editKey} onSaved={update} />
           <EmailPanel reference={ref} onUpdated={update} />
         </div>
