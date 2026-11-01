@@ -6,9 +6,11 @@ import { KnowledgePanel } from "@/components/knowledge-panel";
 import { EmailPanel } from "@/components/email-panel";
 import { ChatPanel } from "@/components/chat-panel";
 import { TuneAnswers } from "@/components/tune-answers";
+import { ModelPicker } from "@/components/model-picker";
 import { PersonaAvatar } from "@/components/brand";
 import { ArrowRight, Bot, Building2, Check, Copy, Mail, Phone, TriangleAlert } from "lucide-react";
 import type { PublicProfile } from "@/lib/types";
+import type { ModelStatus } from "@/lib/models";
 
 export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
   const { id } = use(params);
@@ -18,6 +20,8 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
   const [copied, setCopied] = useState<"email" | "phone" | null>(null);
   // The shared Twilio number, when this reference is the one answering it.
   const [phone, setPhone] = useState<string | null>(null);
+  // Gemini or Grok for text and voice, plus any fallback because a key is missing.
+  const [models, setModels] = useState<ModelStatus | null>(null);
 
   // Some routes return the profile without the owner-only tuned answers and larps; keep the ones we have.
   const update = useCallback(
@@ -32,6 +36,7 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
       if (!res.ok) return setError(body.error);
       setRef(body.reference);
       setPhone(body.phone ?? null);
+      setModels(body.models ?? null);
     },
     [id],
   );
@@ -115,6 +120,7 @@ export default function ReferenceDesk({ params }: PageProps<"/r/[id]">) {
             )}
           </div>
 
+          {models && <ModelPicker referenceId={ref.id} editKey={editKey} status={models} onChange={setModels} />}
           <VoiceCall referenceId={ref.id} managerName={ref.manager.name} />
           <ChatPanel referenceId={ref.id} managerName={ref.manager.name} />
           {editKey && <TuneAnswers reference={ref} editKey={editKey} onSaved={update} />}

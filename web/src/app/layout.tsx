@@ -20,6 +20,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-[var(--on-page)]">
             <Logo size={28} /> Trust Me Bro
           </Link>
+          <Link href="/references" className="btn ml-auto">
+            My references
+          </Link>
         </header>
         <main className="mx-auto w-full max-w-5xl px-4 pb-16 flex-1">{children}</main>
         <footer className="mx-auto w-full max-w-5xl px-4 pb-6 text-xs text-[var(--on-page-2)] text-center">

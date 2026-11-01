@@ -1,3 +1,4 @@
+import type { ModelChoice } from "./models";
 // "phone" and "sms" reach people through the shared Twilio number, who never see the reference page.
 export type Channel = "voice" | "email" | "chat" | "phone" | "sms";
 
@@ -78,6 +79,8 @@ export interface ReferenceProfile {
   /** The fictional manager. `company` is the résumé employer the persona is framed around. */
   manager: { name: string; title: string; company: string };
   voice: string;
+  /** Gemini or Grok for text and voice. Missing kinds use the server default (lib/models.ts). */
+  models?: ModelChoice;
   /** User edits to the persona's tone, focus areas and habits. */
   agent?: AgentCustom;
   email?: { address: string; inboxId?: string; provider: "agentboxd" | "demo" };

@@ -3,6 +3,7 @@ import { checkEditKey, getReference, saveReference } from "@/lib/store";
 import { toPublic } from "@/lib/types";
 import { keepLocked } from "@/lib/qa";
 import { phoneNumberFor } from "@/lib/twilio";
+import { modelStatus, PROVIDERS } from "@/lib/models";
 
 export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]">) {
   const { id } = await ctx.params;
@@ -11,6 +12,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]"
   return Response.json({
     reference: toPublic(p, checkEditKey(p, req.headers.get("x-edit-key"))),
     phone: await phoneNumberFor(p.id),
+    models: modelStatus(p),
   });
 }
 
@@ -44,6 +46,7 @@ const Patch = z.object({
     .array(z.object({ id: z.string().max(40), title: z.string().min(1).max(120), story: z.string().min(1).max(1200) }))
     .max(12)
     .optional(),
+  models: z.object({ text: z.enum(PROVIDERS).optional(), voice: z.enum(PROVIDERS).optional() }).optional(),
 });
 
 // Owner edits. Requires the edit key returned at creation (kept in the creator's browser).
@@ -58,6 +61,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/references/[id
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
   const next = { ...p, ...parsed.data };
   if (parsed.data.qa) next.qa = keepLocked(parsed.data.qa, p.qa);
+  if (parsed.data.models) next.models = { ...p.models, ...parsed.data.models };
   await saveReference(next);
-  return Response.json({ reference: toPublic(next, true) });
+  return Response.json({ reference: toPublic(next, true), models: modelStatus(next) });
 }

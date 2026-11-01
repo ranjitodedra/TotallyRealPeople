@@ -46,6 +46,13 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [x] One shared prompt builder for voice, email and chat (`web/src/lib/instruction.ts`)
 - [~] Resume and job extraction with Gemini (`gemini-3.8-flash`), checked against a schema
 - [~] Voice token route: single-use Gemini Live token with model, voice and prompt locked in
+- [x] Model choice: Gemini or Grok (xAI) for Text (chat, email, SMS) and Voice (browser call, phone), set separately (`web/src/lib/models.ts`)
+  - Defaults: Text = Gemini, Voice = Grok; change with `TEXT_PROVIDER` / `VOICE_PROVIDER`, or per reference on the "AI models" card (creator only)
+  - Missing key: the other provider answers and the card says why; no keys at all = fake text, no voice
+  - Both use the same `buildReferenceInstruction` prompt. Grok text = `grok-4.20-0309-non-reasoning` (~1 s; `grok-4.7` took ~12 s)
+  - Grok voice in the browser: ephemeral `xai-realtime…` token from `/api/references/[id]/voice`, socket in `web/src/lib/grok-live.ts`. The prompt goes to the browser as `session.update` because xAI tokens can't lock it (Gemini's can)
+  - Grok on the phone: the bridge sends Twilio's μ-law straight to Grok (no conversion)
+  - Tested with real keys: text on both, Grok greeting from the browser page (audio + transcript), simulated Twilio call on Grok, all fallbacks. Not tested: a spoken call with a real mic, a real phone call, switching on the card as the creator
 - [x] Profiles saved to a JSON file (`web/.data/`), raw resume never sent to the browser
 - [~] Agentboxd: one inbox per reference, created at build time
 - [~] Agentboxd webhook: signature check, duplicate skip, auto-reply loop guard, reply in thread
@@ -75,3 +82,4 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [ ] More manager templates
 - [ ] Extra voices, then ElevenLabs
 - [ ] Rehearse the demo and record a fallback video
+- [ ] "My references" (`/references`, header link) is a showcase placeholder: it lists the references this browser made (from `trp-edit-*` keys) and sample cards; Duplicate, Archive, Set as phone line and Google/GitHub sign-in are disabled until we add accounts (OAuth)

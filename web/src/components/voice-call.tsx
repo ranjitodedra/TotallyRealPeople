@@ -1,12 +1,17 @@
 "use client";
 
 import { GoogleGenAI, Modality, type LiveServerMessage, type Session } from "@google/genai";
-import { Mic, MicOff, Phone, PhoneOff, TriangleAlert } from "lucide-react";
+import { Info, Mic, MicOff, Phone, PhoneOff, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { VoiceGrant as Grant } from "@/app/api/references/[id]/voice/route";
+import { GrokLive } from "@/lib/grok-live";
 import { downsample, floatToPcm16Base64, pcm16Base64ToFloat, Player, rms } from "@/lib/live-audio";
 
 type Status = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "error";
-type Grant = { token: string; model: string; apiVersion: string; expiresAt: string };
+/** What the call needs from a live session, so Gemini Live and Grok realtime look the same here. */
+type Link = { sendAudio(b64: string): void; sendText(text: string): void; audioEnd(): void; close(): void };
+/** `resumed` is false when the session started a new conversation instead of resuming the handle. */
+type Opened = { link: Link; resumed: boolean };
 type Caption = { who: "caller" | "reference"; text: string };
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -19,21 +24,24 @@ const STATUS_LABEL: Record<Status, string> = {
 };
 
 /**
- * One continuous duplex Gemini Live session. Adapted from the Everprimer voice tutor:
- * token minted server-side, 16 kHz PCM up, 24 kHz PCM down, flush on barge-in,
- * resume on goAway, tear everything down on end/hide/leave.
+ * One continuous duplex voice session, on Gemini Live or Grok realtime (the reference's Voice choice).
+ * Adapted from the Everprimer voice tutor: token minted server-side, 16 kHz PCM up, 24 kHz PCM down,
+ * flush on barge-in, resume on goAway/close, tear everything down on end/hide/leave.
  */
 export function VoiceCall({ referenceId, managerName }: { referenceId: string; managerName: string }) {
   const [status, setStatus] = useState<Status>("idle");
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
+  // Why a different provider than the chosen one is answering (a missing key).
+  const [notice, setNotice] = useState<string | null>(null);
 
   const r = useRef({
     ctx: null as AudioContext | null,
     stream: null as MediaStream | null,
     node: null as AudioWorkletNode | null,
-    session: null as Session | null,
+    session: null as Link | null,
+    provider: null as Grant["provider"] | null,
     player: null as Player | null,
     handle: null as string | null,
     connId: 0,
@@ -76,6 +84,7 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
     s.ctx?.close().catch(() => {});
     s.ctx = null;
     s.handle = null;
+    s.provider = null;
   }, []);
 
   const end = useCallback(() => {
@@ -145,13 +154,76 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
     [addCaption, reconnect],
   );
 
-  const connect = useCallback(
-    async (grant: Grant, fresh: boolean) => {
+  const onClosed = useCallback(
+    (id: number) => {
       const s = r.current;
-      const id = ++s.connId;
+      if (id !== s.connId || !s.live) return;
+      if (Date.now() - s.openedAt < 5000) s.handle = null; // died instantly: don't trust the handle
+      void reconnect();
+    },
+    [reconnect],
+  );
+
+  // Grok tokens can't lock the session, so its settings come with the grant. The handle is the
+  // conversation id: reconnecting with it replays the earlier turns. The token is only needed to
+  // connect, so there is no renew timer.
+  const openGrok = useCallback(
+    async (id: number, grant: Extract<Grant, { provider: "grok" }>): Promise<Opened> => {
+      const s = r.current;
+      const open = (conversationId: string | null) =>
+        GrokLive.connect(
+          { token: grant.token, model: grant.model, ...grant.session, conversationId },
+          {
+            onAudio: (b64) => {
+              if (id !== s.connId) return;
+              s.awaitingReply = false;
+              s.player?.play(pcm16Base64ToFloat(b64));
+            },
+            onInterrupted: () => {
+              if (id === s.connId) s.player?.flush();
+            },
+            onCallerText: (text) => {
+              if (id !== s.connId) return;
+              s.awaitingReply = true;
+              addCaption("caller", text);
+            },
+            onReferenceText: (text) => {
+              if (id === s.connId) addCaption("reference", text);
+            },
+            onTurnComplete: () => {
+              if (id === s.connId) s.awaitingReply = false;
+            },
+            onConversation: (cid) => {
+              if (id === s.connId) s.handle = cid;
+            },
+            onClose: () => onClosed(id),
+          },
+        );
+      const handle = s.handle;
+      let live: GrokLive;
+      let resumed = !!handle;
       try {
-        s.session?.close();
-      } catch {}
+        live = await open(handle);
+      } catch (e) {
+        if (!handle) throw e;
+        s.handle = null;
+        live = await open(null);
+        resumed = false;
+      }
+      const link: Link = {
+        sendAudio: (b64) => live.sendAudio(b64),
+        sendText: (text) => live.sendText(text),
+        audioEnd: () => live.clearInput(),
+        close: () => live.close(),
+      };
+      return { link, resumed };
+    },
+    [addCaption, onClosed],
+  );
+
+  const openGemini = useCallback(
+    async (id: number, grant: Extract<Grant, { provider: "gemini" }>): Promise<Opened> => {
+      const s = r.current;
       const ai = new GoogleGenAI({ apiKey: grant.token, httpOptions: { apiVersion: grant.apiVersion } });
       const open = (handle: string | null) =>
         ai.live.connect({
@@ -163,36 +235,58 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
             onerror: () => {
               if (id === s.connId) void reconnect();
             },
-            onclose: () => {
-              if (id !== s.connId || !s.live) return;
-              if (Date.now() - s.openedAt < 5000) s.handle = null; // died instantly: don't trust the handle
-              void reconnect();
-            },
+            onclose: () => onClosed(id),
           },
         });
+      const handle = s.handle;
       let session: Session;
+      let resumed = !!handle;
       try {
-        session = await open(s.handle);
+        session = await open(handle);
       } catch (e) {
-        if (!s.handle) throw e;
+        if (!handle) throw e;
         s.handle = null;
         session = await open(null);
-        fresh = true;
+        resumed = false;
       }
-      s.session = session;
-      s.openedAt = Date.now();
-      s.failures = 0;
+      // Gemini tokens expire: renew a minute early by reconnecting with the resumption handle.
       clearTimeout(s.renewTimer);
       s.renewTimer = setTimeout(() => void reconnect(), new Date(grant.expiresAt).getTime() - Date.now() - 60_000);
-      if (fresh && !s.handle) {
-        session.sendClientContent({
-          turns: [{ role: "user", parts: [{ text: "(The caller just connected. Introduce yourself in one short sentence.)" }] }],
-          turnComplete: true,
-        });
+      const link: Link = {
+        sendAudio: (data) => session.sendRealtimeInput({ audio: { data, mimeType: "audio/pcm;rate=16000" } }),
+        sendText: (text) => session.sendClientContent({ turns: [{ role: "user", parts: [{ text }] }], turnComplete: true }),
+        audioEnd: () => session.sendRealtimeInput({ audioStreamEnd: true }),
+        close: () => session.close(),
+      };
+      return { link, resumed };
+    },
+    [onMessage, onClosed, reconnect],
+  );
+
+  const connect = useCallback(
+    async (grant: Grant, fresh: boolean) => {
+      const s = r.current;
+      const id = ++s.connId;
+      try {
+        s.session?.close();
+      } catch {}
+      clearTimeout(s.renewTimer);
+      // The Voice choice may have changed since the last connect: another provider can't resume the handle.
+      if (s.provider && s.provider !== grant.provider) s.handle = null;
+      const triedHandle = !!s.handle;
+      const { link, resumed } = grant.provider === "grok" ? await openGrok(id, grant) : await openGemini(id, grant);
+      s.provider = grant.provider;
+      setNotice(grant.note ?? null);
+      s.session = link;
+      s.openedAt = Date.now();
+      s.failures = 0;
+      // A new conversation (the first connect, or a handle that couldn't be resumed) opens with a greeting.
+      if (fresh || (triedHandle && !resumed)) {
+        link.sendText("(The caller just connected. Introduce yourself in one short sentence.)");
         s.awaitingReply = true;
       }
     },
-    [onMessage, reconnect],
+    [openGemini, openGrok],
   );
   useEffect(() => {
     connectRef.current = connect;
@@ -240,7 +334,7 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
       if (rms(e.data) > 0.02) s.lastVoiceAt = Date.now();
       const pcm = floatToPcm16Base64(downsample(e.data, ctx.sampleRate));
       try {
-        s.session.sendRealtimeInput({ audio: { data: pcm, mimeType: "audio/pcm;rate=16000" } });
+        s.session.sendAudio(pcm);
       } catch {}
     };
     s.node = node;
@@ -261,7 +355,7 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
     s.stream?.getAudioTracks().forEach((t) => (t.enabled = !next));
     if (next) {
       try {
-        s.session?.sendRealtimeInput({ audioStreamEnd: true });
+        s.session?.audioEnd();
       } catch {}
     }
     setMuted(next);
@@ -303,6 +397,11 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
             </button>
           </div>
         </div>
+      )}
+      {notice && inCall && (
+        <p className="flex items-center gap-2 text-sm muted">
+          <Info size={16} aria-hidden /> {notice}
+        </p>
       )}
       {error && (
         <p className="flex items-center gap-2 text-sm text-[var(--danger)]">
