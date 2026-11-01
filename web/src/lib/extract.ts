@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { generateJson, gemini } from "./gemini";
-import type { CandidateFacts, TargetRole } from "./types";
+import { parseRoles } from "./employers";
+import type { TargetRole } from "./types";
 
 const ExtractionSchema = z.object({
   facts: z.object({
@@ -65,15 +66,7 @@ const SKILL_WORDS = [
 function fakeExtract(resume: string, jd: string): Extraction {
   const lines = resume.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const name = lines[0]?.slice(0, 60) || "The Candidate";
-  const roleLine = /^(.+?)\s+(?:at|@|—|-|,|\|)\s+(.+?)(?:\s*[(|,]\s*(.+))?$/i;
-  const roles: CandidateFacts["roles"] = [];
-  for (let i = 1; i < lines.length && roles.length < 4; i++) {
-    const m = lines[i].match(roleLine);
-    if (m && /engineer|manager|developer|analyst|designer|lead|intern|director|specialist|scientist|associate/i.test(m[1])) {
-      const bullets = lines.slice(i + 1, i + 5).filter((l) => /^[-•*▪]/.test(l)).map((l) => l.replace(/^[-•*▪]\s*/, ""));
-      roles.push({ title: m[1], company: m[2].replace(/[()]/g, "").trim(), achievements: bullets });
-    }
-  }
+  const roles = parseRoles(resume);
   const lower = (resume + "\n").toLowerCase();
   const skills = SKILL_WORDS.filter((s) => lower.includes(s.toLowerCase()));
   const jdLines = jd.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);

@@ -45,6 +45,13 @@ export interface QaItem {
   locked?: boolean;
 }
 
+/** The user's edits to the persona's style, layered on top of the template. */
+export interface AgentCustom {
+  tone?: string;
+  focusAreas?: string[];
+  habits?: string[];
+}
+
 export interface ReferenceProfile {
   id: string;
   createdAt: string;
@@ -60,6 +67,8 @@ export interface ReferenceProfile {
   /** The fictional manager. `company` is the résumé employer the persona is framed around. */
   manager: { name: string; title: string; company: string };
   voice: string;
+  /** User edits to the persona's tone, focus areas and habits. */
+  agent?: AgentCustom;
   email?: { address: string; inboxId?: string; provider: "agentboxd" | "demo" };
   messages: EmailMessage[];
   /** Tuned answers from the "Tune answers" menu. */

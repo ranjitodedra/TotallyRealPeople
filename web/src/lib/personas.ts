@@ -25,6 +25,11 @@ export interface PersonaTemplate {
    * ("Sam") so the model learns the style, not facts. Keep at least one refusal.
    */
   examples: PersonaExample[];
+  /**
+   * This persona's sample answers for the shared question bank (lib/question-bank.ts),
+   * keyed by question id. Anything left out uses the base placeholder.
+   */
+  answerOverrides?: Record<string, string>;
   /** Prebuilt Gemini Live voice. */
   voice: string;
 }

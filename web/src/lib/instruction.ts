@@ -1,12 +1,14 @@
 import { getPersona, type PersonaTemplate } from "./personas";
-import type { Channel, ReferenceProfile } from "./types";
+import { isFilled, questionBank } from "./question-bank";
+import type { AgentCustom, Channel, ReferenceProfile } from "./types";
 
 /**
  * The one prompt builder. Voice, email, chat (and the phone bridge) all use this,
  * so every channel speaks from the same facts.
  */
 export function buildReferenceInstruction(p: ReferenceProfile, channel: Channel): string {
-  const persona = getPersona(p.personaId);
+  // Template half (persona file) + user half (their tone/focus edits).
+  const persona = withAgent(getPersona(p.personaId), p.agent);
   const f = p.facts;
   const first = f.candidateName.split(" ")[0] || f.candidateName;
   const d = asData;
@@ -21,7 +23,7 @@ export function buildReferenceInstruction(p: ReferenceProfile, channel: Channel)
 
   const sections = [
     `IDENTITY
-You are ${p.manager.name}, ${p.manager.title}, a fictional manager persona in an AI reference simulation made by TotallyRealPeople.
+You are ${d(p.manager.name)}, ${d(p.manager.title)}, a fictional manager persona in an AI reference simulation made by TotallyRealPeople.
 You are giving a reference for ${d(f.candidateName)}, framed as their manager at ${d(p.manager.company)}.
 You are an AI. You never claim to be a real person, and you never claim to have personally watched ${d(first)} work.`,
 
@@ -72,11 +74,38 @@ ${p.unknowns.map((u) => `- ${d(u)}`).join("\n") || "- Anything not in the facts 
 These show tone and how to decline. They are about a made-up candidate, "Sam". Never use their details as facts about ${d(first)}.
 ${persona.examples.map((e) => `Q: ${e.question}\nA: ${e.answer}`).join("\n\n")}`,
 
+    questionGuide(persona),
+
     `CHANNEL
 ${channelRules(channel, p)}`,
   ];
 
   return sections.filter(Boolean).join("\n\n");
+}
+
+function withAgent(persona: PersonaTemplate, agent?: AgentCustom): PersonaTemplate {
+  if (!agent) return persona;
+  const clean = (xs?: string[]) => xs?.map(asData).filter((x) => x.trim());
+  return {
+    ...persona,
+    tone: agent.tone?.trim() ? asData(agent.tone) : persona.tone,
+    focusAreas: clean(agent.focusAreas)?.length ? clean(agent.focusAreas)! : persona.focusAreas,
+    habits: clean(agent.habits)?.length ? clean(agent.habits)! : persona.habits,
+  };
+}
+
+/** The persona's sample answers for likely questions. Guidance for tone and shape, never a fact source. */
+function questionGuide(persona: PersonaTemplate) {
+  const rows = questionBank(persona)
+    .map(
+      (q) =>
+        `Q: ${q.question}\nA: ${isFilled(q.answer) ? q.answer : "(no sample answer: if the candidate facts above don't answer this, say you don't know)"}`,
+    )
+    .join("\n\n");
+  return `QUESTION GUIDE
+Likely questions with sample answers in your voice. When a question is close to one of these, use the sample as a guide for tone and shape, then answer in your own words with this candidate's facts.
+Samples never add facts about the candidate and never override the BOUNDARIES.
+${rows}`;
 }
 
 function candidateAnswers(p: ReferenceProfile) {
