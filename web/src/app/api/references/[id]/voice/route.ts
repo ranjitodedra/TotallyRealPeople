@@ -1,4 +1,5 @@
 import { GoogleGenAI, Modality } from "@google/genai";
+import { elevenLabsSignedUrl } from "@/lib/elevenlabs";
 import { env } from "@/lib/env";
 import { grokVoiceToken } from "@/lib/grok";
 import { buildReferenceInstruction } from "@/lib/instruction";
@@ -16,9 +17,17 @@ export type VoiceGrant =
       note?: string;
       /** Sent by the browser as session.update. xAI tokens can't lock the session, unlike Gemini's. */
       session: { instructions: string; voice: string };
+    }
+  | {
+      provider: "elevenlabs";
+      /** Opens one conversation with the private agent. */
+      signedUrl: string;
+      note?: string;
+      /** Sent by the browser as the system prompt override, like Grok's session.update. */
+      prompt: string;
     };
 
-// Mints a short-lived voice token for Gemini Live or Grok realtime (whichever this reference uses).
+// Mints a short-lived voice grant for Gemini Live, Grok realtime or ElevenLabs (whichever this reference uses).
 // The browser never sees the API key. Called on start and on renew.
 export async function POST(_req: Request, ctx: RouteContext<"/api/references/[id]/voice">) {
   const { id } = await ctx.params;
@@ -28,7 +37,8 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/references/[id
   if (!using) return Response.json({ error: `${note} Add it to web/.env.local.`, code: "no_key" }, { status: 503 });
 
   try {
-    const grant: VoiceGrant = using === "grok" ? await grokGrant(p) : await geminiGrant(p);
+    const grant: VoiceGrant =
+      using === "grok" ? await grokGrant(p) : using === "elevenlabs" ? await elevenLabsGrant(p) : await geminiGrant(p);
     return Response.json({ ...grant, note });
   } catch (e) {
     console.error(`${using} voice token failed`, e);
@@ -47,6 +57,10 @@ async function grokGrant(p: Profile): Promise<VoiceGrant> {
     expiresAt: token.expiresAt,
     session: { instructions: buildReferenceInstruction(p, "voice"), voice: env.grokVoice || MANAGER.grokVoice },
   };
+}
+
+async function elevenLabsGrant(p: Profile): Promise<VoiceGrant> {
+  return { provider: "elevenlabs", signedUrl: await elevenLabsSignedUrl(), prompt: buildReferenceInstruction(p, "voice") };
 }
 
 // Single-use Gemini Live token with the model, voice and system instruction locked in, so the

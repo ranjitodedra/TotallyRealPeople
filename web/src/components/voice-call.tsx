@@ -4,6 +4,7 @@ import { GoogleGenAI, Modality, type LiveServerMessage, type Session } from "@go
 import { Info, Mic, MicOff, Phone, PhoneOff, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { VoiceGrant as Grant } from "@/app/api/references/[id]/voice/route";
+import { ElevenLabsLive } from "@/lib/elevenlabs-live";
 import { GrokLive } from "@/lib/grok-live";
 import { downsample, floatToPcm16Base64, pcm16Base64ToFloat, Player, rms } from "@/lib/live-audio";
 
@@ -24,7 +25,7 @@ const STATUS_LABEL: Record<Status, string> = {
 };
 
 /**
- * One continuous duplex voice session, on Gemini Live or Grok realtime (the reference's Voice choice).
+ * One continuous duplex voice session, on Gemini Live, Grok realtime or ElevenLabs (the reference's Voice choice).
  * Adapted from the Everprimer voice tutor: token minted server-side, 16 kHz PCM up, 24 kHz PCM down,
  * flush on barge-in, resume on goAway/close, tear everything down on end/hide/leave.
  */
@@ -221,6 +222,45 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
     [addCaption, onClosed],
   );
 
+  // ElevenLabs speaks what its agent's LLM (Grok) writes. No resumption, so every connect is a new conversation.
+  const openElevenLabs = useCallback(
+    async (id: number, grant: Extract<Grant, { provider: "elevenlabs" }>): Promise<Opened> => {
+      const s = r.current;
+      let rate = 24000;
+      const live = await ElevenLabsLive.connect(
+        { signedUrl: grant.signedUrl, prompt: grant.prompt },
+        {
+          onAudio: (b64) => {
+            if (id !== s.connId) return;
+            s.awaitingReply = false;
+            s.player?.play(pcm16Base64ToFloat(b64), rate);
+          },
+          onInterrupted: () => {
+            if (id === s.connId) s.player?.flush();
+          },
+          onCallerText: (text) => {
+            if (id !== s.connId) return;
+            s.awaitingReply = true;
+            addCaption("caller", text);
+          },
+          onReferenceText: (text) => {
+            if (id === s.connId) addCaption("reference", text);
+          },
+          onClose: () => onClosed(id),
+        },
+      );
+      rate = live.outputRate;
+      const link: Link = {
+        sendAudio: (b64) => live.sendAudio(b64),
+        sendText: (text) => live.sendText(text),
+        audioEnd: () => {},
+        close: () => live.close(),
+      };
+      return { link, resumed: false };
+    },
+    [addCaption, onClosed],
+  );
+
   const openGemini = useCallback(
     async (id: number, grant: Extract<Grant, { provider: "gemini" }>): Promise<Opened> => {
       const s = r.current;
@@ -274,7 +314,12 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
       // The Voice choice may have changed since the last connect: another provider can't resume the handle.
       if (s.provider && s.provider !== grant.provider) s.handle = null;
       const triedHandle = !!s.handle;
-      const { link, resumed } = grant.provider === "grok" ? await openGrok(id, grant) : await openGemini(id, grant);
+      const { link, resumed } =
+        grant.provider === "grok"
+          ? await openGrok(id, grant)
+          : grant.provider === "elevenlabs"
+            ? await openElevenLabs(id, grant)
+            : await openGemini(id, grant);
       s.provider = grant.provider;
       setNotice(grant.note ?? null);
       s.session = link;
@@ -286,7 +331,7 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
         s.awaitingReply = true;
       }
     },
-    [openGemini, openGrok],
+    [openGemini, openGrok, openElevenLabs],
   );
   useEffect(() => {
     connectRef.current = connect;

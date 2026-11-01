@@ -63,8 +63,9 @@ export class Player {
   private sources = new Set<AudioBufferSourceNode>();
   constructor(private ctx: AudioContext) {}
 
-  play(samples: Float32Array) {
-    const buf = this.ctx.createBuffer(1, samples.length, DOWNLINK_RATE);
+  /** `rate` is the samples' rate: 24 kHz for Gemini and Grok, 16 or 24 kHz for ElevenLabs. */
+  play(samples: Float32Array, rate = DOWNLINK_RATE) {
+    const buf = this.ctx.createBuffer(1, samples.length, rate);
     buf.getChannelData(0).set(samples);
     const src = this.ctx.createBufferSource();
     src.buffer = buf;

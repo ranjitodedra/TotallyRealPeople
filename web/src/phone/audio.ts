@@ -46,15 +46,22 @@ export function twilioToGemini(b64: string): string {
  */
 export class Downlink {
   private carry: number[] = [];
+  /** Input samples per 8 kHz output sample: 3 for 24 kHz (Gemini), 2 for 16 kHz (ElevenLabs can be either). */
+  constructor(private ratio = 3) {}
 
   convert(b64: string): string {
     const pcm = Buffer.from(b64, "base64");
     const samples = this.carry;
+    const k = this.ratio;
     for (let i = 0; i + 1 < pcm.length; i += 2) samples.push(pcm.readInt16LE(i));
-    const n = Math.floor(samples.length / 3);
+    const n = Math.floor(samples.length / k);
     const out = Buffer.alloc(n);
-    for (let i = 0; i < n; i++) out[i] = mulawEncode((samples[3 * i] + samples[3 * i + 1] + samples[3 * i + 2]) / 3);
-    this.carry = samples.slice(n * 3);
+    for (let i = 0; i < n; i++) {
+      let sum = 0;
+      for (let j = 0; j < k; j++) sum += samples[k * i + j];
+      out[i] = mulawEncode(sum / k);
+    }
+    this.carry = samples.slice(n * k);
     return out.toString("base64");
   }
 

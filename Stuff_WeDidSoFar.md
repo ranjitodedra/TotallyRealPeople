@@ -47,7 +47,7 @@ Legend: `[x]` done, `[~]` built but not tested with real keys, `[ ]` not started
 - [~] Resume and job extraction with Gemini (`gemini-3.8-flash`), checked against a schema
 - [~] Voice token route: single-use Gemini Live token with model, voice and prompt locked in
 - [x] Model choice: Gemini or Grok (xAI) for Text (chat, email, SMS) and Voice (browser call, phone), set separately (`web/src/lib/models.ts`)
-  - Defaults: Text = Gemini, Voice = Grok; change with `TEXT_PROVIDER` / `VOICE_PROVIDER`, or per reference on the "AI models" card (creator only)
+  - Defaults: Text = Grok, Voice = Grok; change with `TEXT_PROVIDER` / `VOICE_PROVIDER`, or per reference on the "AI models" card (creator only)
   - Missing key: the other provider answers and the card says why; no keys at all = fake text, no voice
   - Both use the same `buildReferenceInstruction` prompt. Grok text = `grok-4.20-0309-non-reasoning` (~1 s; `grok-4.7` took ~12 s)
   - Grok voice in the browser: ephemeral `xai-realtime…` token from `/api/references/[id]/voice`, socket in `web/src/lib/grok-live.ts`. The prompt goes to the browser as `session.update` because xAI tokens can't lock it (Gemini's can)

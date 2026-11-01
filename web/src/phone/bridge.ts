@@ -1,10 +1,12 @@
-// One phone call: Twilio Media Stream (WebSocket) ⇄ Gemini Live or Grok realtime (the reference's
+// One phone call: Twilio Media Stream (WebSocket) ⇄ Gemini Live, Grok realtime or ElevenLabs (the reference's
 // Voice choice, lib/models.ts), using the real API key on the server.
 // The voice webhook (src/app/twiml/voice/route.ts) signed a token naming the reference; the stream's
 // "start" event carries that token.
 
 import { GoogleGenAI, Modality, type LiveServerMessage } from "@google/genai";
 import { WebSocket } from "ws";
+import { elevenLabsSignedUrl } from "../lib/elevenlabs";
+import { elevenLabsFormatProblem, elevenLabsInit, elevenLabsOutputRate, type ElevenLabsMessage } from "../lib/elevenlabs-live";
 import { env } from "../lib/env";
 import { buildReferenceInstruction, PHONE_GREETING } from "../lib/instruction";
 import { MANAGER } from "../lib/manager";
@@ -65,7 +67,8 @@ export function handleTwilioStream(ws: WebSocket) {
     const { using } = resolveModel(p, "voice");
     if (!using) return end("no voice API key");
 
-    const s = using === "grok" ? await openGrok(p, events) : await openGemini(p, events);
+    const s =
+      using === "grok" ? await openGrok(p, events) : using === "elevenlabs" ? await openElevenLabs(p, events) : await openGemini(p, events);
     if (ended) return s.close();
     session = s;
     console.log(`[phone] connected call to reference ${p.id} (${p.manager.name}) on ${using}`);
@@ -222,6 +225,71 @@ function openGrok(p: ReferenceProfile, on: CallEvents): Promise<Upstream> {
     ws.on("close", () => {
       if (!ready) reject(new Error("Grok closed before the session started"));
       else on.closed("Grok closed");
+    });
+  });
+}
+
+// ElevenLabs agent (its custom LLM is Grok): 16 kHz PCM in, 24 kHz PCM out like Gemini, so audio.ts
+// converts both ways. Our prompt goes in as the system prompt override.
+async function openElevenLabs(p: ReferenceProfile, on: CallEvents): Promise<Upstream> {
+  const ws = new WebSocket(await elevenLabsSignedUrl());
+  let down = new Downlink();
+  const send = (msg: object) => {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
+  };
+  let ready = false;
+
+  return new Promise((resolve, reject) => {
+    ws.on("open", () => send(elevenLabsInit(buildReferenceInstruction(p, "phone"))));
+    ws.on("message", (raw) => {
+      let m: ElevenLabsMessage;
+      try {
+        m = JSON.parse(raw.toString());
+      } catch {
+        return;
+      }
+      switch (m.type) {
+        case "conversation_initiation_metadata": {
+          const problem = elevenLabsFormatProblem(m);
+          if (problem) {
+            ws.close();
+            return reject(new Error(problem));
+          }
+          down = new Downlink(elevenLabsOutputRate(m) / 8000);
+          ready = true;
+          // Makes the agent speak first; its opening line (the AI disclosure) comes from "## Phone" in the prompt file.
+          send({ type: "user_message", text: PHONE_GREETING });
+          resolve({ send: (mulaw) => send({ user_audio_chunk: twilioToGemini(mulaw) }), close: () => ws.close() });
+          break;
+        }
+        case "audio": {
+          const payload = m.audio_event?.audio_base_64 ? down.convert(m.audio_event.audio_base_64) : "";
+          if (payload) on.audio(payload);
+          break;
+        }
+        case "interruption":
+          down.reset();
+          on.interrupted();
+          break;
+        case "user_transcript":
+          if (m.user_transcription_event?.user_transcript) console.log(`[phone] caller: ${m.user_transcription_event.user_transcript}`);
+          break;
+        case "agent_response":
+          if (m.agent_response_event?.agent_response) console.log(`[phone] reference: ${m.agent_response_event.agent_response}`);
+          break;
+        case "ping":
+          send({ type: "pong", event_id: m.ping_event?.event_id });
+          break;
+      }
+    });
+    ws.on("error", (e) => {
+      console.error("[phone] ElevenLabs socket error", e.message);
+      if (!ready) reject(e);
+      else on.closed("ElevenLabs error");
+    });
+    ws.on("close", (_code, reason) => {
+      if (!ready) reject(new Error(`ElevenLabs closed before the conversation started${reason.length ? `: ${reason}` : ""}`));
+      else on.closed("ElevenLabs closed");
     });
   });
 }

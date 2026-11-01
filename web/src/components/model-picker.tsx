@@ -5,13 +5,13 @@ import { useState } from "react";
 import type { ModelKind, ModelStatus, Provider } from "@/lib/models";
 import { PanelTitle } from "./brand";
 
-const ROWS: { kind: ModelKind; label: string; hint: string }[] = [
-  { kind: "text", label: "Text", hint: "chat, email, SMS" },
-  { kind: "voice", label: "Voice", hint: "calls in the browser and on the phone" },
+const ROWS: { kind: ModelKind; label: string; hint: string; options: Provider[] }[] = [
+  { kind: "text", label: "Text", hint: "chat, email, SMS", options: ["gemini", "grok"] },
+  { kind: "voice", label: "Voice", hint: "calls in the browser and on the phone", options: ["gemini", "grok", "elevenlabs"] },
 ];
-const LABEL: Record<Provider, string> = { gemini: "Gemini", grok: "Grok" };
+const LABEL: Record<Provider, string> = { gemini: "Gemini", grok: "Grok", elevenlabs: "ElevenLabs" };
 
-/** Gemini or Grok for text and for voice. Only the creator can change it; everyone sees what's in use. */
+/** Gemini or Grok for text; Gemini, Grok or ElevenLabs for voice. Only the creator can change it; everyone sees what's in use. */
 export function ModelPicker({
   referenceId,
   editKey,
@@ -51,14 +51,14 @@ export function ModelPicker({
       <PanelTitle icon={Cpu} tint="#e8f6fe" color="#1899d6">
         AI models
       </PanelTitle>
-      {ROWS.map(({ kind, label, hint }) => {
+      {ROWS.map(({ kind, label, hint, options }) => {
         const s = status[kind];
         return (
           <div key={kind} className="flex flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-medium w-12">{label}</span>
               <div className="flex gap-1.5" role="radiogroup" aria-label={`${label} model`}>
-                {(["gemini", "grok"] as const).map((p) => (
+                {options.map((p) => (
                   <button
                     key={p}
                     role="radio"
@@ -66,10 +66,10 @@ export function ModelPicker({
                     className={`btn text-xs! py-0.5! px-2.5! ${s.wanted === p ? "btn-primary" : ""}`}
                     disabled={!editKey || busy === kind}
                     onClick={() => pick(kind, p)}
-                    title={status.available[p] ? undefined : `No ${LABEL[p]} key on the server`}
+                    title={status.available[p] ? undefined : p === "elevenlabs" ? "Needs ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID on the server" : `No ${LABEL[p]} key on the server`}
                   >
                     {LABEL[p]}
-                    {!status.available[p] && " (no key)"}
+                    {!status.available[p] && (p === "elevenlabs" ? " (not set up)" : " (no key)")}
                   </button>
                 ))}
               </div>

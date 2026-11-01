@@ -38,7 +38,7 @@ Without API keys the app runs in fake mode: a simple parser reads the resume and
 
 ## Choosing Gemini or Grok
 
-Text (chat, email replies, SMS) and Voice (the browser call and the phone line) can each run on Gemini or Grok (xAI). By default **Text uses Gemini and Voice uses Grok**; change the defaults with `TEXT_PROVIDER` and `VOICE_PROVIDER` (`gemini` or `grok`).
+Text (chat, email replies, SMS) and Voice (the browser call and the phone line) can each run on Gemini or Grok (xAI). By default **both Text and Voice use Grok**; change the defaults with `TEXT_PROVIDER` and `VOICE_PROVIDER` (`gemini` or `grok`).
 
 Each reference can switch on the reference desk: the **AI models** card, above "Call Dana". Only the reference's creator can change it. The choice lives in `web/src/lib/models.ts`. Both providers get the same prompt from `buildReferenceInstruction`, so facts and AI-disclosure rules are identical.
 
@@ -76,7 +76,7 @@ Copy `web/.env.example` to `web/.env.local` and fill in what you have.
 | --- | --- |
 | `GEMINI_API_KEY` | Resume extraction; text and voice when set to Gemini |
 | `GROK_API_KEY` | Text and voice when set to Grok (xAI) |
-| `TEXT_PROVIDER` | Default provider for chat, email and SMS: `gemini` (default) or `grok` |
+| `TEXT_PROVIDER` | Default provider for chat, email and SMS: `grok` (default) or `gemini` |
 | `VOICE_PROVIDER` | Default provider for browser and phone calls: `grok` (default) or `gemini` |
 | `AGENTBOXD_API_KEY` | Real email inboxes for each reference |
 | `AGENTBOXD_WEBHOOK_SECRET` | Verifying incoming email webhooks |

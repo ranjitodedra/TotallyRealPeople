@@ -3,7 +3,7 @@ import { checkEditKey, getReference, saveReference } from "@/lib/store";
 import { toPublic } from "@/lib/types";
 import { keepLocked } from "@/lib/qa";
 import { phoneNumberFor } from "@/lib/twilio";
-import { modelStatus, PROVIDERS } from "@/lib/models";
+import { modelStatus, TEXT_PROVIDERS, VOICE_PROVIDERS } from "@/lib/models";
 
 export async function GET(req: Request, ctx: RouteContext<"/api/references/[id]">) {
   const { id } = await ctx.params;
@@ -46,7 +46,7 @@ const Patch = z.object({
     .array(z.object({ id: z.string().max(40), title: z.string().min(1).max(120), story: z.string().min(1).max(1200) }))
     .max(12)
     .optional(),
-  models: z.object({ text: z.enum(PROVIDERS).optional(), voice: z.enum(PROVIDERS).optional() }).optional(),
+  models: z.object({ text: z.enum(TEXT_PROVIDERS).optional(), voice: z.enum(VOICE_PROVIDERS).optional() }).optional(),
 });
 
 // Owner edits. Requires the edit key returned at creation (kept in the creator's browser).

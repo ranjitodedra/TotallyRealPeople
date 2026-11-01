@@ -1,45 +1,61 @@
-import { env, hasGemini, hasGrok } from "./env";
+import { env, hasElevenLabs, hasGemini, hasGrok } from "./env";
 import type { ReferenceProfile } from "./types";
 
 /**
  * Which AI answers each kind of conversation.
  *   text  = chat, email replies, SMS answers
  *   voice = the browser "Call Dana" call and the Twilio phone bridge
- * Defaults come from TEXT_PROVIDER / VOICE_PROVIDER (Gemini for text, Grok for voice), and each
+ * Defaults come from TEXT_PROVIDER / VOICE_PROVIDER (Grok for both), and each
  * reference can override them from the reference desk. Résumé extraction always uses Gemini.
+ * ElevenLabs is voice only: it speaks what its agent's LLM (Grok) writes.
  */
-export const PROVIDERS = ["gemini", "grok"] as const;
-export type Provider = (typeof PROVIDERS)[number];
+export const TEXT_PROVIDERS = ["gemini", "grok"] as const;
+export const VOICE_PROVIDERS = ["gemini", "grok", "elevenlabs"] as const;
+export type Provider = (typeof VOICE_PROVIDERS)[number];
+export type TextProvider = (typeof TEXT_PROVIDERS)[number];
 export type ModelKind = "text" | "voice";
-export type ModelChoice = Partial<Record<ModelKind, Provider>>;
+export type ModelChoice = { text?: TextProvider; voice?: Provider };
 
-export const PROVIDER_LABEL: Record<Provider, string> = { gemini: "Gemini", grok: "Grok" };
-const KEY_NAME: Record<Provider, string> = { gemini: "GEMINI_API_KEY", grok: "GROK_API_KEY" };
+const OPTIONS: Record<ModelKind, readonly Provider[]> = { text: TEXT_PROVIDERS, voice: VOICE_PROVIDERS };
+/** Who answers instead when the wanted provider has no key, in order. */
+const FALLBACK: Provider[] = ["grok", "gemini", "elevenlabs"];
 
-const asProvider = (s: string, fallback: Provider): Provider => (PROVIDERS.includes(s as Provider) ? (s as Provider) : fallback);
-
-export const DEFAULT_MODELS: Record<ModelKind, Provider> = {
-  text: asProvider(env.textProvider, "gemini"),
-  voice: asProvider(env.voiceProvider, "grok"),
+export const PROVIDER_LABEL: Record<Provider, string> = { gemini: "Gemini", grok: "Grok", elevenlabs: "ElevenLabs" };
+const KEY_NAME: Record<Provider, string> = {
+  gemini: "GEMINI_API_KEY",
+  grok: "GROK_API_KEY",
+  elevenlabs: "ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID",
 };
 
-export const hasProvider = (p: Provider) => (p === "gemini" ? hasGemini() : hasGrok());
+const asProvider = (s: string, kind: ModelKind, fallback: Provider): Provider =>
+  OPTIONS[kind].includes(s as Provider) ? (s as Provider) : fallback;
+
+export const DEFAULT_MODELS: Record<ModelKind, Provider> = {
+  text: asProvider(env.textProvider, "text", "grok"),
+  voice: asProvider(env.voiceProvider, "voice", "grok"),
+};
+
+export function hasProvider(p: Provider) {
+  if (p === "gemini") return hasGemini();
+  if (p === "grok") return hasGrok();
+  return hasElevenLabs();
+}
 
 /** What a reference actually uses for one kind, after falling back when a key is missing. */
 export interface ResolvedModel {
   /** What the reference (or the default) asks for. */
   wanted: Provider;
-  /** What runs. Null means no key for either provider: fake mode for text, no voice. */
+  /** What runs. Null means no key for any provider: fake mode for text, no voice. */
   using: Provider | null;
   /** Why `using` differs from `wanted`. Shown on the reference desk. */
   note?: string;
 }
 
 export function resolveModel(p: Pick<ReferenceProfile, "models"> | null, kind: ModelKind): ResolvedModel {
-  const wanted = p?.models?.[kind] ?? DEFAULT_MODELS[kind];
+  const wanted = asProvider(p?.models?.[kind] ?? "", kind, DEFAULT_MODELS[kind]);
   if (hasProvider(wanted)) return { wanted, using: wanted };
-  const other: Provider = wanted === "gemini" ? "grok" : "gemini";
-  if (hasProvider(other)) {
+  const other = FALLBACK.find((x) => x !== wanted && OPTIONS[kind].includes(x) && hasProvider(x));
+  if (other) {
     return { wanted, using: other, note: `No ${KEY_NAME[wanted]} on the server, so ${PROVIDER_LABEL[other]} is answering.` };
   }
   return {
@@ -54,7 +70,7 @@ export function modelStatus(p: Pick<ReferenceProfile, "models">) {
   return {
     text: resolveModel(p, "text"),
     voice: resolveModel(p, "voice"),
-    available: { gemini: hasGemini(), grok: hasGrok() } as Record<Provider, boolean>,
+    available: { gemini: hasGemini(), grok: hasGrok(), elevenlabs: hasElevenLabs() } as Record<Provider, boolean>,
   };
 }
 export type ModelStatus = ReturnType<typeof modelStatus>;

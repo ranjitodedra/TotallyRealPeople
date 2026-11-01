@@ -10,9 +10,13 @@ export const env = {
   grokVoiceModel: process.env.GROK_VOICE_MODEL || "grok-voice-latest",
   // Empty means the manager's own Grok voice (manager.ts).
   grokVoice: process.env.GROK_VOICE || "",
+  // ElevenLabs Agents for voice: ElevenLabs listens and speaks, the agent's custom LLM (Grok) writes the words.
+  // One agent serves browser and phone; it must use PCM 16000 Hz input and PCM 24000 Hz output.
+  elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+  elevenLabsAgentId: process.env.ELEVENLABS_AGENT_ID || "",
   // Which provider answers text (chat, email, SMS) and voice (browser call, phone) by default.
   // Each reference can override this from the reference desk. See lib/models.ts.
-  textProvider: process.env.TEXT_PROVIDER || "gemini",
+  textProvider: process.env.TEXT_PROVIDER || "grok",
   voiceProvider: process.env.VOICE_PROVIDER || "grok",
   agentboxdApiKey: process.env.AGENTBOXD_API_KEY || "",
   agentboxdBaseUrl: process.env.AGENTBOXD_BASE_URL || "https://api.agentboxd.com",
@@ -29,4 +33,5 @@ export const env = {
 
 export const hasGemini = () => env.geminiApiKey.length > 0;
 export const hasGrok = () => env.grokApiKey.length > 0;
+export const hasElevenLabs = () => env.elevenLabsApiKey.length > 0 && env.elevenLabsAgentId.length > 0;
 export const hasAgentboxd = () => env.agentboxdApiKey.length > 0;
