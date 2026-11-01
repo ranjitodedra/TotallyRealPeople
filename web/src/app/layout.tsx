@@ -23,8 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </header>
         <main className="mx-auto w-full max-w-5xl px-4 pb-16 flex-1">{children}</main>
         <footer className="mx-auto w-full max-w-5xl px-4 pb-6 text-xs text-[var(--on-page-2)] text-center">
-          Every reference here is an AI simulation built from candidate-provided documents. It doesn&apos;t verify
-          employment.
+          Every reference here is an AI simulation built from candidate-provided documents. It doesn&apos;t verify employment.
         </footer>
       </body>
     </html>

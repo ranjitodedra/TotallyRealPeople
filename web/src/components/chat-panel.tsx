@@ -1,6 +1,8 @@
 "use client";
 
+import { MessageSquareText, SendHorizontal } from "lucide-react";
 import { useState } from "react";
+import { PanelTitle } from "./brand";
 
 type Turn = { role: "user" | "model"; text: string };
 
@@ -38,7 +40,9 @@ export function ChatPanel({ referenceId, managerName }: { referenceId: string; m
 
   return (
     <div className="card flex flex-col gap-3">
-      <span className="label mb-0!">Or ask in text</span>
+      <PanelTitle icon={MessageSquareText} tint="#f1ebfb" color="#7a4fc7">
+        Or ask in text
+      </PanelTitle>
       {history.length > 0 && (
         <div className="captions border-t-0! pt-0!">
           {history.map((t, i) => (
@@ -60,7 +64,7 @@ export function ChatPanel({ referenceId, managerName }: { referenceId: string; m
           }}
         />
         <button className="btn" disabled={busy}>
-          Ask
+          <SendHorizontal size={16} aria-hidden /> Ask
         </button>
       </form>
       {error && <p className="text-sm text-[var(--danger)]">{error}</p>}

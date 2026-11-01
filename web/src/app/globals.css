@@ -92,7 +92,10 @@ textarea.field {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 80ms, background 120ms, border-color 120ms;
+  transition:
+    transform 80ms,
+    background 120ms,
+    border-color 120ms;
 }
 .btn:hover {
   background: var(--card-2);
@@ -134,7 +137,9 @@ textarea.field {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 5px 0 var(--green-dark);
-  transition: transform 80ms, box-shadow 80ms;
+  transition:
+    transform 80ms,
+    box-shadow 80ms;
 }
 .btn-call:hover {
   background: #61d90a;
@@ -231,7 +236,9 @@ textarea.field {
   padding: 14px 18px;
   background: #fff;
   cursor: pointer;
-  transition: border-color 120ms, background 120ms;
+  transition:
+    border-color 120ms,
+    background 120ms;
 }
 .option:hover {
   background: var(--card-2);
@@ -266,4 +273,78 @@ textarea.field {
     opacity: 0;
     transform: translateY(8px);
   }
+}
+
+/* Icon-only button */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: #fff;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background 120ms,
+    color 120ms,
+    border-color 120ms;
+}
+.icon-btn:hover {
+  background: var(--card-2);
+  color: var(--blue);
+  border-color: #cfe9f7;
+}
+
+/* Popup */
+.modal-panel {
+  background: #fff;
+  border-radius: 20px;
+  border: 2px solid var(--line);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+  animation: modalIn 180ms ease-out both;
+}
+.modal-backdrop {
+  animation: fadeIn 150ms ease-out both;
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Small colored icon tile used in section and panel headings */
+.icon-tile {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropdown menu */
+.dropdown {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12);
+  animation: modalIn 140ms ease-out both;
+}
+.dropdown-row {
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+}
+.dropdown-row:hover {
+  background: var(--card-2);
 }

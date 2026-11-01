@@ -1,6 +1,7 @@
 "use client";
 
 import { GoogleGenAI, Modality, type LiveServerMessage, type Session } from "@google/genai";
+import { Mic, MicOff, Phone, PhoneOff, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { downsample, floatToPcm16Base64, pcm16Base64ToFloat, Player, rms } from "@/lib/live-audio";
 
@@ -144,52 +145,55 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
     [addCaption, reconnect],
   );
 
-  const connect = useCallback(async (grant: Grant, fresh: boolean) => {
-    const s = r.current;
-    const id = ++s.connId;
-    try {
-      s.session?.close();
-    } catch {}
-    const ai = new GoogleGenAI({ apiKey: grant.token, httpOptions: { apiVersion: grant.apiVersion } });
-    const open = (handle: string | null) =>
-      ai.live.connect({
-        model: grant.model,
-        config: { responseModalities: [Modality.AUDIO], sessionResumption: handle ? { handle } : {} },
-        callbacks: {
-          onopen: () => {},
-          onmessage: (m) => onMessage(id, m),
-          onerror: () => {
-            if (id === s.connId) void reconnect();
+  const connect = useCallback(
+    async (grant: Grant, fresh: boolean) => {
+      const s = r.current;
+      const id = ++s.connId;
+      try {
+        s.session?.close();
+      } catch {}
+      const ai = new GoogleGenAI({ apiKey: grant.token, httpOptions: { apiVersion: grant.apiVersion } });
+      const open = (handle: string | null) =>
+        ai.live.connect({
+          model: grant.model,
+          config: { responseModalities: [Modality.AUDIO], sessionResumption: handle ? { handle } : {} },
+          callbacks: {
+            onopen: () => {},
+            onmessage: (m) => onMessage(id, m),
+            onerror: () => {
+              if (id === s.connId) void reconnect();
+            },
+            onclose: () => {
+              if (id !== s.connId || !s.live) return;
+              if (Date.now() - s.openedAt < 5000) s.handle = null; // died instantly: don't trust the handle
+              void reconnect();
+            },
           },
-          onclose: () => {
-            if (id !== s.connId || !s.live) return;
-            if (Date.now() - s.openedAt < 5000) s.handle = null; // died instantly: don't trust the handle
-            void reconnect();
-          },
-        },
-      });
-    let session: Session;
-    try {
-      session = await open(s.handle);
-    } catch (e) {
-      if (!s.handle) throw e;
-      s.handle = null;
-      session = await open(null);
-      fresh = true;
-    }
-    s.session = session;
-    s.openedAt = Date.now();
-    s.failures = 0;
-    clearTimeout(s.renewTimer);
-    s.renewTimer = setTimeout(() => void reconnect(), new Date(grant.expiresAt).getTime() - Date.now() - 60_000);
-    if (fresh && !s.handle) {
-      session.sendClientContent({
-        turns: [{ role: "user", parts: [{ text: "(The caller just connected. Introduce yourself in one short sentence.)" }] }],
-        turnComplete: true,
-      });
-      s.awaitingReply = true;
-    }
-  }, [onMessage, reconnect]);
+        });
+      let session: Session;
+      try {
+        session = await open(s.handle);
+      } catch (e) {
+        if (!s.handle) throw e;
+        s.handle = null;
+        session = await open(null);
+        fresh = true;
+      }
+      s.session = session;
+      s.openedAt = Date.now();
+      s.failures = 0;
+      clearTimeout(s.renewTimer);
+      s.renewTimer = setTimeout(() => void reconnect(), new Date(grant.expiresAt).getTime() - Date.now() - 60_000);
+      if (fresh && !s.handle) {
+        session.sendClientContent({
+          turns: [{ role: "user", parts: [{ text: "(The caller just connected. Introduce yourself in one short sentence.)" }] }],
+          turnComplete: true,
+        });
+        s.awaitingReply = true;
+      }
+    },
+    [onMessage, reconnect],
+  );
   useEffect(() => {
     connectRef.current = connect;
   }, [connect]);
@@ -283,7 +287,7 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
     <div className="card flex flex-col gap-3">
       {!inCall ? (
         <button className="btn-call" onClick={start}>
-          <PhoneIcon /> Call {managerName.split(" ")[0]}
+          <Phone size={22} aria-hidden /> Call {managerName.split(" ")[0]}
         </button>
       ) : (
         <div className="flex items-center gap-3">
@@ -291,15 +295,20 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
           <span className="text-sm font-medium">{STATUS_LABEL[status]}</span>
           <div className="ml-auto flex gap-2">
             <button className="btn" onClick={toggleMute} aria-pressed={muted}>
+              {muted ? <Mic size={16} aria-hidden /> : <MicOff size={16} aria-hidden />}
               {muted ? "Unmute" : "Mute"}
             </button>
             <button className="btn btn-danger" onClick={end}>
-              End call
+              <PhoneOff size={16} aria-hidden /> End call
             </button>
           </div>
         </div>
       )}
-      {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+      {error && (
+        <p className="flex items-center gap-2 text-sm text-[var(--danger)]">
+          <TriangleAlert size={16} aria-hidden /> {error}
+        </p>
+      )}
       {captions.length > 0 && (
         <div className="captions" aria-live="polite">
           {captions.map((c, i) => (
@@ -310,13 +319,5 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
         </div>
       )}
     </div>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />
-    </svg>
   );
 }

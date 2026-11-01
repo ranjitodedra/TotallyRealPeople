@@ -1,6 +1,8 @@
 "use client";
 
+import { CornerDownRight, FlaskConical, Inbox, Send } from "lucide-react";
 import { useState } from "react";
+import { PanelTitle } from "./brand";
 import type { PublicProfile } from "@/lib/types";
 
 export function EmailPanel({ reference, onUpdated }: { reference: PublicProfile; onUpdated: (r: PublicProfile) => void }) {
@@ -40,7 +42,9 @@ export function EmailPanel({ reference, onUpdated }: { reference: PublicProfile;
   return (
     <div className="card flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="label mb-0!">Email</span>
+        <PanelTitle icon={Inbox} tint="#e3f4fd" color="#1899d6">
+          Email
+        </PanelTitle>
         <code className="font-mono text-xs muted truncate">{reference.email?.address}</code>
       </div>
 
@@ -53,7 +57,13 @@ export function EmailPanel({ reference, onUpdated }: { reference: PublicProfile;
               <button className="w-full text-left px-3 py-2 text-sm" onClick={() => setOpen(open === m.id ? null : m.id)}>
                 <div className="flex gap-2">
                   <span className={m.direction === "outbound" ? "text-[var(--green-ink)] font-medium" : "font-medium"}>
-                    {m.direction === "outbound" ? `↳ ${reference.manager.name} (AI)` : m.from}
+                    {m.direction === "outbound" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <CornerDownRight size={14} aria-hidden /> {reference.manager.name} (AI)
+                      </span>
+                    ) : (
+                      m.from
+                    )}
                   </span>
                   {m.demo && <span className="chip ml-auto">demo</span>}
                 </div>
@@ -66,12 +76,15 @@ export function EmailPanel({ reference, onUpdated }: { reference: PublicProfile;
       )}
 
       <details className="text-sm">
-        <summary className="cursor-pointer font-medium">Send a test email (demo)</summary>
+        <summary className="cursor-pointer font-medium inline-flex items-center gap-2">
+          <FlaskConical size={16} aria-hidden /> Send a test email (demo)
+        </summary>
         <form onSubmit={send} className="mt-3 flex flex-col gap-2">
           <input className="field" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="hiring@company.com" />
           <input className="field" value={subject} onChange={(e) => setSubject(e.target.value)} />
           <textarea className="field min-h-28" value={text} onChange={(e) => setText(e.target.value)} />
           <button className="btn self-start" disabled={busy}>
+            <Send size={15} aria-hidden />
             {busy ? "Waiting for a reply…" : "Send test email"}
           </button>
           {error && <p className="text-[var(--danger)]">{error}</p>}

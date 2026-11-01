@@ -1,9 +1,15 @@
 "use client";
 
+import { Brain, BriefcaseBusiness, Link2, Pencil, Plus, Save, ShieldQuestion, Target, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
+import { PanelTitle } from "./brand";
 import type { CandidateRole, PublicProfile } from "@/lib/types";
 
-const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean);
+const lines = (s: string) =>
+  s
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
 export function KnowledgePanel({
   reference,
@@ -44,7 +50,10 @@ export function KnowledgePanel({
               endDate: r.endDate || undefined,
               achievements: lines(r.achievementsText),
             })),
-            skills: draft.skills.split(",").map((s) => s.trim()).filter(Boolean),
+            skills: draft.skills
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
           },
           targetRole: { ...reference.targetRole, title: draft.targetTitle, priorities: lines(draft.priorities) },
           relevance: lines(draft.relevance),
@@ -69,17 +78,43 @@ export function KnowledgePanel({
       setDraft((d) => ({ ...d, roles: d.roles.map((r, j) => (j === i ? { ...r, ...patch } : r)) }));
     return (
       <div className="card flex flex-col gap-3 text-sm">
-        <span className="label mb-0!">Edit what this reference knows</span>
+        <PanelTitle icon={Pencil} tint="#fdeaf1" color="#c23a6b">
+          Edit what this reference knows
+        </PanelTitle>
         <Field label="Candidate name">
-          <input className="field" value={draft.candidateName} onChange={(e) => setDraft({ ...draft, candidateName: e.target.value })} />
+          <input
+            className="field"
+            value={draft.candidateName}
+            onChange={(e) => setDraft({ ...draft, candidateName: e.target.value })}
+          />
         </Field>
         {draft.roles.map((r, i) => (
           <div key={i} className="rounded-2xl border-2 border-[var(--line)] p-3 flex flex-col gap-2 bg-white">
             <div className="grid grid-cols-2 gap-2">
-              <input className="field" value={r.title} placeholder="Title" onChange={(e) => setRole(i, { title: e.target.value })} />
-              <input className="field" value={r.company} placeholder="Company" onChange={(e) => setRole(i, { company: e.target.value })} />
-              <input className="field" value={r.startDate} placeholder="Start" onChange={(e) => setRole(i, { startDate: e.target.value })} />
-              <input className="field" value={r.endDate} placeholder="End" onChange={(e) => setRole(i, { endDate: e.target.value })} />
+              <input
+                className="field"
+                value={r.title}
+                placeholder="Title"
+                onChange={(e) => setRole(i, { title: e.target.value })}
+              />
+              <input
+                className="field"
+                value={r.company}
+                placeholder="Company"
+                onChange={(e) => setRole(i, { company: e.target.value })}
+              />
+              <input
+                className="field"
+                value={r.startDate}
+                placeholder="Start"
+                onChange={(e) => setRole(i, { startDate: e.target.value })}
+              />
+              <input
+                className="field"
+                value={r.endDate}
+                placeholder="End"
+                onChange={(e) => setRole(i, { endDate: e.target.value })}
+              />
             </div>
             <textarea
               className="field min-h-20"
@@ -87,34 +122,59 @@ export function KnowledgePanel({
               placeholder="One achievement per line"
               onChange={(e) => setRole(i, { achievementsText: e.target.value })}
             />
-            <button className="btn btn-danger self-start text-xs! py-1!" onClick={() => setDraft((d) => ({ ...d, roles: d.roles.filter((_, j) => j !== i) }))}>
-              Remove role
+            <button
+              className="btn btn-danger self-start text-xs! py-1!"
+              onClick={() => setDraft((d) => ({ ...d, roles: d.roles.filter((_, j) => j !== i) }))}
+            >
+              <Trash2 size={13} aria-hidden /> Remove role
             </button>
           </div>
         ))}
         <button
           className="btn self-start text-xs! py-1!"
-          onClick={() => setDraft((d) => ({ ...d, roles: [...d.roles, { title: "", company: "", startDate: "", endDate: "", achievementsText: "" }] }))}
+          onClick={() =>
+            setDraft((d) => ({
+              ...d,
+              roles: [...d.roles, { title: "", company: "", startDate: "", endDate: "", achievementsText: "" }],
+            }))
+          }
         >
-          Add role
+          <Plus size={13} aria-hidden /> Add role
         </button>
         <Field label="Skills (comma separated)">
           <input className="field" value={draft.skills} onChange={(e) => setDraft({ ...draft, skills: e.target.value })} />
         </Field>
         <Field label="Target role">
-          <input className="field" value={draft.targetTitle} onChange={(e) => setDraft({ ...draft, targetTitle: e.target.value })} />
+          <input
+            className="field"
+            value={draft.targetTitle}
+            onChange={(e) => setDraft({ ...draft, targetTitle: e.target.value })}
+          />
         </Field>
         <Field label="What the role cares about (one per line)">
-          <textarea className="field min-h-20" value={draft.priorities} onChange={(e) => setDraft({ ...draft, priorities: e.target.value })} />
+          <textarea
+            className="field min-h-20"
+            value={draft.priorities}
+            onChange={(e) => setDraft({ ...draft, priorities: e.target.value })}
+          />
         </Field>
         <Field label="Why they fit (one per line)">
-          <textarea className="field min-h-20" value={draft.relevance} onChange={(e) => setDraft({ ...draft, relevance: e.target.value })} />
+          <textarea
+            className="field min-h-20"
+            value={draft.relevance}
+            onChange={(e) => setDraft({ ...draft, relevance: e.target.value })}
+          />
         </Field>
         <Field label="Can't verify (one per line)">
-          <textarea className="field min-h-16" value={draft.unknowns} onChange={(e) => setDraft({ ...draft, unknowns: e.target.value })} />
+          <textarea
+            className="field min-h-16"
+            value={draft.unknowns}
+            onChange={(e) => setDraft({ ...draft, unknowns: e.target.value })}
+          />
         </Field>
         <div className="flex gap-2">
           <button className="btn btn-primary" onClick={save} disabled={saving}>
+            <Save size={16} aria-hidden />
             {saving ? "Saving…" : "Save changes"}
           </button>
           <button className="btn" onClick={() => setEditing(false)}>
@@ -129,16 +189,20 @@ export function KnowledgePanel({
   return (
     <div className="card flex flex-col gap-4 text-sm">
       <div className="flex items-center justify-between">
-        <span className="label mb-0!">What this reference knows</span>
+        <PanelTitle icon={Brain} tint="#fdeaf1" color="#c23a6b">
+          What this reference knows
+        </PanelTitle>
         {editKey && (
           <button className="btn text-xs! py-1!" onClick={startEdit}>
-            Edit
+            <Pencil size={13} aria-hidden /> Edit
           </button>
         )}
       </div>
 
       <section>
-        <h3 className="font-semibold mb-1">Roles</h3>
+        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
+          <BriefcaseBusiness size={15} aria-hidden /> Roles
+        </h3>
         {f.roles.length === 0 && <p className="muted">No roles found. Edit to add them.</p>}
         <ul className="flex flex-col gap-2">
           {f.roles.map((r, i) => (
@@ -161,7 +225,9 @@ export function KnowledgePanel({
 
       {f.skills.length > 0 && (
         <section>
-          <h3 className="font-semibold mb-1">Skills</h3>
+          <h3 className="font-semibold mb-1 flex items-center gap-1.5">
+            <Wrench size={15} aria-hidden /> Skills
+          </h3>
           <div className="flex flex-wrap gap-1.5">
             {f.skills.map((s) => (
               <span key={s} className="chip">
@@ -173,7 +239,9 @@ export function KnowledgePanel({
       )}
 
       <section>
-        <h3 className="font-semibold mb-1">Target role · {reference.targetRole.title}</h3>
+        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
+          <Target size={15} aria-hidden /> Target role · {reference.targetRole.title}
+        </h3>
         <ul className="list-disc pl-5 text-[var(--ink-2)]">
           {reference.targetRole.priorities.map((p, i) => (
             <li key={i}>{p}</li>
@@ -182,7 +250,9 @@ export function KnowledgePanel({
       </section>
 
       <section>
-        <h3 className="font-semibold mb-1">Why they fit</h3>
+        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
+          <Link2 size={15} aria-hidden /> Why they fit
+        </h3>
         <ul className="list-disc pl-5 text-[var(--ink-2)]">
           {reference.relevance.map((p, i) => (
             <li key={i}>{p}</li>
@@ -191,7 +261,9 @@ export function KnowledgePanel({
       </section>
 
       <section className="rounded-2xl px-4 py-3 bg-[var(--amber-bg)] text-[var(--amber-ink)]">
-        <h3 className="font-semibold mb-1">Can&apos;t verify</h3>
+        <h3 className="font-semibold mb-1 flex items-center gap-1.5">
+          <ShieldQuestion size={15} aria-hidden /> Can&apos;t verify
+        </h3>
         <ul className="list-disc pl-5">
           {reference.unknowns.map((p, i) => (
             <li key={i}>{p}</li>
@@ -207,15 +279,13 @@ type DraftRole = { title: string; company: string; startDate: string; endDate: s
 function toDraft(r: PublicProfile) {
   return {
     candidateName: r.facts.candidateName,
-    roles: r.facts.roles.map(
-      (x: CandidateRole): DraftRole => ({
-        title: x.title,
-        company: x.company,
-        startDate: x.startDate ?? "",
-        endDate: x.endDate ?? "",
-        achievementsText: x.achievements.join("\n"),
-      }),
-    ),
+    roles: r.facts.roles.map((x: CandidateRole): DraftRole => ({
+      title: x.title,
+      company: x.company,
+      startDate: x.startDate ?? "",
+      endDate: x.endDate ?? "",
+      achievementsText: x.achievements.join("\n"),
+    })),
     skills: r.facts.skills.join(", "),
     targetTitle: r.targetRole.title,
     priorities: r.targetRole.priorities.join("\n"),

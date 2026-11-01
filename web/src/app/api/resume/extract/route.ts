@@ -9,7 +9,10 @@ export async function POST(req: Request) {
   try {
     const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
     const { text } = await extractText(pdf, { mergePages: true });
-    const clean = String(text).replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    const clean = String(text)
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
     if (!clean) return Response.json({ error: "No text found in that PDF. Paste the text instead." }, { status: 422 });
     return Response.json({ text: clean });
   } catch {
