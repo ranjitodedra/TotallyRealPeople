@@ -17,11 +17,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { JobPicker } from "@/components/job-picker";
 import { guessEmployers } from "@/lib/employers";
 import { MANAGER } from "@/lib/manager";
 import { SAMPLE_RESUME } from "@/lib/samples";
+import type { BuildEvent, BuildStep } from "@/lib/types";
 
 export default function CreatePage() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function CreatePage() {
   const [customOpen, setCustomOpen] = useState(false);
   const employers = useMemo(() => guessEmployers(resume), [resume]);
   const [busy, setBusy] = useState<null | "pdf" | "build">(null);
+  const [step, setStep] = useState<BuildStep | "done" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -58,20 +60,23 @@ export default function CreatePage() {
     if (jd.trim().length < 20) return setError("Paste the job description first.");
     setBusy("build");
     try {
+      setStep("extract");
       const res = await fetch("/api/references", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeText: resume, jobDescriptionText: jd, ...customBody(custom) }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error);
+      if (!res.ok || !res.body) throw new Error((await res.json().catch(() => ({}))).error);
+      const done = await readBuild(res.body, setStep);
       try {
-        localStorage.setItem(`trp-edit-${body.reference.id}`, body.editKey);
+        localStorage.setItem(`trp-edit-${done.reference.id}`, done.editKey);
       } catch {}
-      router.push(`/r/${body.reference.id}`);
+      setStep("done");
+      router.push(`/r/${done.reference.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't build the reference.");
+      setError(e instanceof Error && e.message ? e.message : "Couldn't build the reference.");
       setBusy(null);
+      setStep(null);
     }
   }
 
@@ -154,9 +159,97 @@ export default function CreatePage() {
           {busy === "build" ? <Loader2 size={20} className="animate-spin" aria-hidden /> : <Sparkles size={20} aria-hidden />}
           {busy === "build" ? "Building your reference…" : "Build my reference"}
         </button>
-        <p className="text-sm text-center text-[var(--on-page-2)]">Creates an AI simulation from the experience you provide.</p>
+        {step ? (
+          <BuildProgress step={step} />
+        ) : (
+          <p className="text-sm text-center text-[var(--on-page-2)]">Creates an AI simulation from the experience you provide.</p>
+        )}
         {error && <p className="text-sm text-center text-[var(--danger)]">{error}</p>}
       </div>
+    </div>
+  );
+}
+
+/** Reads the streamed build response, reporting each step. Resolves with the finished reference. */
+async function readBuild(body: ReadableStream<Uint8Array>, onStep: (s: BuildStep) => void) {
+  const reader = body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const e = JSON.parse(line) as BuildEvent;
+      if (e.type === "step") onStep(e.step);
+      else if (e.type === "error") throw new Error(e.error);
+      else return e;
+    }
+  }
+  throw new Error("The build stopped before it finished. Try again.");
+}
+
+/**
+ * Each step's share of the bar and roughly how long it takes. While a step runs, the bar
+ * eases toward the end of its share; the next server event snaps it forward.
+ */
+const STEPS: { id: BuildStep; label: string; from: number; to: number; secs: number }[] = [
+  { id: "extract", label: "Reading your résumé and the job (Gemini)", from: 3, to: 60, secs: 12 },
+  { id: "inbox", label: "Setting up the reference's inbox", from: 60, to: 68, secs: 2 },
+  { id: "questions", label: "Drafting likely questions and answers (Gemini)", from: 68, to: 95, secs: 8 },
+  { id: "save", label: "Saving", from: 95, to: 99, secs: 1 },
+];
+
+function BuildProgress({ step }: { step: BuildStep | "done" }) {
+  const at = step === "done" ? STEPS.length : STEPS.findIndex((s) => s.id === step);
+  const cur = STEPS[at];
+  // Start at the step's "from", then on the next frame ease toward ~90% of the way to "to".
+  const [target, setTarget] = useState<{ step: string; pct: number } | null>(null);
+  useEffect(() => {
+    if (!cur) return;
+    const t = requestAnimationFrame(() => setTarget({ step: cur.id, pct: cur.from + (cur.to - cur.from) * 0.9 }));
+    return () => cancelAnimationFrame(t);
+  }, [cur]);
+  const easing = cur && target?.step === cur.id;
+  const pct = !cur ? 100 : easing ? target.pct : cur.from;
+
+  return (
+    <div className="flex flex-col gap-2" role="status" aria-live="polite">
+      <div
+        className="h-3 rounded-full bg-[var(--card-2)] overflow-hidden"
+        role="progressbar"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-full bg-[var(--green)]"
+          style={{
+            width: `${pct}%`,
+            transition: easing ? `width ${cur.secs}s cubic-bezier(0.2, 0.6, 0.3, 1)` : "width 0.3s ease-out",
+          }}
+        />
+      </div>
+      <ul className="flex flex-col gap-1 text-sm">
+        {STEPS.map((s, i) => (
+          <li
+            key={s.id}
+            className={`flex items-center gap-2 ${i > at ? "text-[var(--on-page-2)] opacity-60" : "text-[var(--on-page)]"}`}
+          >
+            {i < at ? (
+              <Check size={15} className="text-[var(--green-ink)]" aria-hidden />
+            ) : i === at ? (
+              <Loader2 size={15} className="animate-spin" aria-hidden />
+            ) : (
+              <span className="w-[15px] h-[15px] rounded-full border-2 border-current" aria-hidden />
+            )}
+            {s.label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

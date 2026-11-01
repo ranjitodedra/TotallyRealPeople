@@ -99,3 +99,12 @@ export function toPublic(p: ReferenceProfile, owner = false): PublicProfile {
   const { resumeText, jobDescriptionText, editKeyHash, qa, larps, ...rest } = p;
   return owner ? { ...rest, qa, larps } : rest;
 }
+
+/** Steps of building a reference, in order. The create screen shows these as a progress bar. */
+export type BuildStep = "extract" | "inbox" | "questions" | "save";
+
+/** One line of the streamed (NDJSON) response from POST /api/references. */
+export type BuildEvent =
+  | { type: "step"; step: BuildStep }
+  | { type: "done"; reference: PublicProfile; editKey: string }
+  | { type: "error"; error: string };

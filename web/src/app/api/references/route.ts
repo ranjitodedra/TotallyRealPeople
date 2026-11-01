@@ -5,7 +5,7 @@ import { hashKey, newId, saveReference } from "@/lib/store";
 import { createInbox } from "@/lib/agentboxd";
 import { generateQa } from "@/lib/qa";
 import { matchEmployer } from "@/lib/employers";
-import { toPublic, type ReferenceProfile } from "@/lib/types";
+import { toPublic, type BuildEvent, type ReferenceProfile } from "@/lib/types";
 
 const Body = z.object({
   resumeText: z.string().min(40, "The résumé looks too short.").max(40000),
@@ -23,17 +23,39 @@ const Body = z.object({
     .optional(),
 });
 
+// Bad input gets a plain JSON 400. Otherwise the response streams one JSON line per step,
+// so the browser can show how the Gemini calls are going, then a final "done" or "error" line.
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
-  const { resumeText, jobDescriptionText, manager, agent } = parsed.data;
 
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (e: BuildEvent) => controller.enqueue(enc.encode(JSON.stringify(e) + "\n"));
+      try {
+        await build(parsed.data, send);
+      } catch (e) {
+        console.error("build failed", e);
+        send({ type: "error", error: "Couldn't build the reference. Try again." });
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" } });
+}
+
+async function build(
+  { resumeText, jobDescriptionText, manager, agent }: z.infer<typeof Body>,
+  send: (e: BuildEvent) => void,
+) {
+  send({ type: "step", step: "extract" });
   let ex;
   try {
     ex = await extractProfile(resumeText, jobDescriptionText);
   } catch (e) {
     console.error("extract failed", e);
-    return Response.json({ error: "Couldn't read those documents. Try again." }, { status: 502 });
+    return send({ type: "error", error: "Couldn't read those documents. Try again." });
   }
 
   const id = newId();
@@ -59,6 +81,7 @@ export async function POST(req: Request) {
     editKeyHash: hashKey(editKey),
   };
 
+  send({ type: "step", step: "inbox" });
   const username = `${profile.manager.name.split(" ")[0]}-${id.slice(0, 5)}`.toLowerCase().replace(/[^a-z0-9-]/g, "");
   try {
     const inbox = await createInbox(`ref-${id}`, username, `${profile.manager.name} (AI reference sim)`);
@@ -70,6 +93,7 @@ export async function POST(req: Request) {
     profile.email = { address: `${username}@demo.totallyrealpeople`, provider: "demo" };
   }
 
+  send({ type: "step", step: "questions" });
   try {
     profile.qa = await generateQa(profile);
   } catch (e) {
@@ -77,6 +101,7 @@ export async function POST(req: Request) {
     profile.qa = [];
   }
 
+  send({ type: "step", step: "save" });
   await saveReference(profile);
-  return Response.json({ reference: toPublic(profile, true), editKey });
+  send({ type: "done", reference: toPublic(profile, true), editKey });
 }
