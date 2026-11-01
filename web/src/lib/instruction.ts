@@ -161,7 +161,7 @@ export const PHONE_DISCLOSURE = "You've reached an AI reference simulation from 
  * Sent as the first turn so the Live model speaks first (it otherwise waits for the caller).
  * The opening line itself comes from "## Phone" in the prompt file.
  */
-export const PHONE_GREETING = "(The call just connected. Say your opening line now.)";
+export const PHONE_GREETING = "(Your phone is ringing. Someone you don't know is calling you, and you just picked up. Answer it.)";
 
 /** Put in front of the first text reply in each SMS conversation. */
 export function smsDisclosure(p: ReferenceProfile) {
