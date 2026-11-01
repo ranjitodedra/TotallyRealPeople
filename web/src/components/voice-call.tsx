@@ -326,8 +326,9 @@ export function VoiceCall({ referenceId, managerName }: { referenceId: string; m
       s.openedAt = Date.now();
       s.failures = 0;
       // A new conversation (the first connect, or a handle that couldn't be resumed) opens with a greeting.
+      // Neutral on purpose: how to open (and whether to introduce yourself) is "## Voice" in the prompt file.
       if (fresh || (triedHandle && !resumed)) {
-        link.sendText("(The caller just connected. Introduce yourself in one short sentence.)");
+        link.sendText("(The call just connected. Say your opening line now.)");
         s.awaitingReply = true;
       }
     },
