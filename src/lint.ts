@@ -20,4 +20,3 @@ export function lintReply(text: string, prompt = '', persona?: Persona, contactP
   if (promptText.length > 20 && text.toLowerCase().includes(promptText.toLowerCase())) issues.push('prompt_text');
   return { ok: issues.length === 0, issues };
 }
-
